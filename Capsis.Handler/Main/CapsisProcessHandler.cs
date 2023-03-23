@@ -4,10 +4,13 @@ using Newtonsoft.Json;
 using System;
 using System.Data;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Xml;
 using static System.Net.Mime.MediaTypeNames;
 
+[assembly: InternalsVisibleTo("Capsis.Handler.Tests")]
 namespace Capsis.Handler
 {
     public class CapsisProcessHandler
@@ -17,7 +20,7 @@ namespace Capsis.Handler
             public static readonly string COMPLETED = "COMPLETED";
             public static readonly string IN_PROGRESS = "IN_PROGRESS";
             public static readonly string ERROR = "ERROR";
-            public static readonly string CANCELLED = "CANCELLED";
+            public static readonly string STOPPED = "STOPPED";
 
             public SimulationStatus(string status, string? errorMessage, double progress, string? result)
             {
@@ -40,12 +43,13 @@ namespace Capsis.Handler
             INIT,
             OPERATION_PENDING,
             READY,           
-            CANCELLED,
+            STOPPED,
             ERROR            
         }
 
         string capsisPath;
         string dataDirectory;
+        bool enableJavaWatchdog;
 
         double progress;     // value between [0,1] only valid when in STARTED mode
 
@@ -53,10 +57,10 @@ namespace Capsis.Handler
 
         State state;
         string errorMessage;   
-        Thread? thread;  // will stay null if used in sync mode
-        Process? process;
+        internal Thread? thread;  // will stay null if used in sync mode
+        internal Process? process;
 
-        public CapsisProcessHandler(string capsisPath, string dataDirectory)
+        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool enableJavaWatchdog = true)
         {            
             this.capsisPath = capsisPath;
             this.dataDirectory = dataDirectory;
@@ -64,17 +68,8 @@ namespace Capsis.Handler
             thread = null;
             process = null;
             result = null;
-        }
-
-        ~CapsisProcessHandler()
-        {
-            // stop the process if it's running
-            if (process != null && !process.HasExited)
-                Stop();
-
-            if (thread != null && !thread.IsAlive)
-                thread.Join();
-        }
+            this.enableJavaWatchdog = enableJavaWatchdog;
+        }        
 
         public State getState() { return state; }
         public double getProgress() { return progress; }
@@ -104,7 +99,7 @@ namespace Capsis.Handler
 
             if (!thread.IsAlive || state != State.READY)
             {
-                throw new InvalidOperationException("CapsisProcess could not start async thread");
+                throw new InvalidOperationException("CapsisProcess could not start async thread.  Message : " + errorMessage);
             }
         }
 
@@ -120,7 +115,9 @@ namespace Capsis.Handler
             processStartInfo.RedirectStandardInput = true;
             processStartInfo.RedirectStandardOutput = true;            
             processStartInfo.FileName = "java.exe";
-            processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript ";
+            processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript";
+            if (!enableJavaWatchdog)
+                processStartInfo.Arguments += " --disableWatchdog";
 
             try
             {
@@ -128,27 +125,20 @@ namespace Capsis.Handler
                 if (process == null)
                 {
                     errorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
-                    state = State.ERROR;
-                    if (thread == null) // only throw in sync mode
-                        throw new Exception(errorMessage);
-                    else
-                        return;
+                    state = State.ERROR;                                        
+                    return;
                 }
             }
             catch (Exception e)
             {
                 errorMessage = "Exception caught while starting the process : " + e.Message;
                 state = State.ERROR;
-                if (thread == null) // only throw in sync mode
-                    throw new Exception(errorMessage);
-                else 
-                    return;
+                return;
             }
 
             bool stopListening = false;
 
-            progress = 0.0;
-            state = State.READY;            
+            progress = 0.0;            
 
             while (process != null && !process.HasExited && !stopListening)
             {                
@@ -170,6 +160,8 @@ namespace Capsis.Handler
                                 {
                                     lock (this)
                                     {
+                                        state = State.READY;
+
                                         if (msg.payload != null)
                                         {
                                             progress = Double.Parse(msg.payload);   
@@ -205,7 +197,7 @@ namespace Capsis.Handler
                         }
                         catch (JsonReaderException e)
                         {
-
+                            // silently ignore this unknown message
                         }
                     }
                 }
@@ -217,14 +209,18 @@ namespace Capsis.Handler
                     } catch (Exception ex) {
                         errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
                         state = State.ERROR;
-                        if (thread == null) // only throw in sync mode
-                            throw new Exception(errorMessage);
-                        else
-                            return;
+                        return;
                     }                    
                     state = State.ERROR;
                     stopListening = true;
                 }
+            }
+
+            if (process != null && process.HasExited)  // at this point, the process should be running
+            {
+                errorMessage = "Process terminated unexpectedly in directory " + capsisPath;
+                state = State.ERROR;
+                return;
             }
         }
         
@@ -262,6 +258,9 @@ namespace Capsis.Handler
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, filename);
                 process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
             }
+
+            while (state == State.OPERATION_PENDING)
+                Thread.Sleep(1);
         }
 
         public List<string> VariantList()
@@ -337,9 +336,9 @@ namespace Capsis.Handler
                 {
                     return new SimulationStatus(SimulationStatus.IN_PROGRESS, null, progress, null);
                 }
-                else if (state == State.CANCELLED)
+                else if (state == State.STOPPED)
                 {
-                    return new SimulationStatus(SimulationStatus.CANCELLED, null, 0.0, null);
+                    return new SimulationStatus(SimulationStatus.STOPPED, null, 0.0, null);
                 }
                 else if (state == State.ERROR)
                 {
@@ -350,24 +349,6 @@ namespace Capsis.Handler
                     return new SimulationStatus(SimulationStatus.ERROR, "Unknown simulation status", 0.0, null);
                 }
             }
-        }
-
-        public bool Cancel() 
-        {
-            lock (this)
-            {
-                if (state == State.OPERATION_PENDING && process != null)
-                {
-                    process.Kill();         // killing the process and stopping the thread will leave the handler in an unusable state, which is intended.
-                    process = null;
-
-                    state = State.CANCELLED;
-
-                    return true;
-                }
-
-                return false;
-            }
-        }
+        }        
     }
 }

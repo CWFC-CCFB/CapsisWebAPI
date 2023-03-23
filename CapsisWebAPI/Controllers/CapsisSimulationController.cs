@@ -23,6 +23,7 @@ namespace CapsisWebAPI.Controllers
         public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
         {            
             _logger = logger;
+            handlerDict = new Dictionary<string, CapsisProcessHandler>();
         }
 
         protected void LogRequest(HttpRequest req)
@@ -85,7 +86,7 @@ namespace CapsisWebAPI.Controllers
         
         [HttpPost]
         [Route("Simulate")]
-        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Capsis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] int[]? fieldMatches = null)
+        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Capsis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
         {
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
@@ -93,13 +94,16 @@ namespace CapsisWebAPI.Controllers
             try
             {
                 List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
+                List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
 
                 CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
+
+                handler.Start();
 
                 if (initialYear == -1)
                     initialYear = DateTime.Now.Year;
 
-                handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatches);
+                handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
 
                 Guid newTaskGuid = Guid.NewGuid();
                 handlerDict[newTaskGuid.ToString()] = handler;
@@ -132,7 +136,8 @@ namespace CapsisWebAPI.Controllers
         {
             try
             {
-                return Ok(handlerDict[taskID].Cancel());
+                handlerDict[taskID].Stop();
+                return Ok();
             }
             catch (Exception e)
             {
