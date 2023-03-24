@@ -96,7 +96,7 @@ namespace Capsis.Handler
                 // read the CSV data
                 string data = File.ReadAllText("data/STR_RE2_70.csv");
                 int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-                handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);
+                handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
                 Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is still alive
                 Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is still responding            
                 Assert.AreEqual(CapsisProcessHandler.State.READY, handler.getState());  // ensure handler is still in READY state (after an async call)
