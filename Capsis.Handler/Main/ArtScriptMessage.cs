@@ -20,6 +20,7 @@ namespace Capsis.Handler
             ARTSCRIPT_MESSAGE_GET_FIELDS,
             ARTSCRIPT_MESSAGE_ERROR,
             ARTSCRIPT_MESSAGE_COMPLETED,
+            ARTSCRIPT_MESSAGE_PORT
         }
 
         enum ArtScriptSpeciesType

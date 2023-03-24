@@ -4,7 +4,11 @@ using Newtonsoft.Json;
 using System;
 using System.Data;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Xml;
@@ -59,16 +63,24 @@ namespace Capsis.Handler
         string errorMessage;   
         internal Thread? thread;  // will stay null if used in sync mode
         internal Process? process;
+        bool ownsProcess;
 
-        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool enableJavaWatchdog = true)
+        int bindToPort; // if this value is non-zero, then connect directly to this port instead of waiting for the port number to be advertised.  Typically used for debugging.
+
+        StreamWriter? writerProcessInput;
+
+        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool enableJavaWatchdog = true, int bindToPort = 0)
         {            
             this.capsisPath = capsisPath;
             this.dataDirectory = dataDirectory;
             state = State.INIT;            
             thread = null;
             process = null;
+            ownsProcess = false;
             result = null;
+            writerProcessInput = null;
             this.enableJavaWatchdog = enableJavaWatchdog;
+            this.bindToPort = bindToPort;
         }        
 
         public State getState() { return state; }
@@ -105,54 +117,86 @@ namespace Capsis.Handler
 
         void SendMessage(ArtScriptMessage msg)
         {
-            if (process == null)
+            if (writerProcessInput == null)
                 throw new InvalidOperationException("Cannot send message to a null process");
 
-            process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+            lock (writerProcessInput)
+            {
+                string jsonMSG = JsonConvert.SerializeObject(msg);
+                writerProcessInput.WriteLine(jsonMSG);
 
-            process.StandardInput.Flush();
+                writerProcessInput.Flush();
+
+                Console.WriteLine("Sending message : " + jsonMSG);
+            }
         }
 
         void LaunchProcess()
         {
-            string classPathOption = "-cp ";
-            classPathOption += capsisPath + Path.AltDirectorySeparatorChar +  ";";
-            classPathOption += capsisPath + Path.AltDirectorySeparatorChar + "ext/*;";
-            classPathOption += capsisPath + Path.AltDirectorySeparatorChar  + "class;";
+            bool stopListening = false;
+            progress = 0.0;
 
-            ProcessStartInfo processStartInfo = new ProcessStartInfo();
-            processStartInfo.UseShellExecute = false;
-            processStartInfo.RedirectStandardInput = true;
-            processStartInfo.RedirectStandardOutput = true;            
-            processStartInfo.FileName = "java.exe";
-            processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript";
-            if (!enableJavaWatchdog)
-                processStartInfo.Arguments += " --disableWatchdog";
+            StreamReader? readerProcessOutput = null;
+            TcpClient? client = null;
 
-            try
+            if (bindToPort == 0)    // if a port is specified, then do not spawn a new process, but connect to it
             {
-                process = Process.Start(processStartInfo);
-                if (process == null)
+                string classPathOption = "-cp ";
+                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + ";";
+                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + "ext/*;";
+                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + "class;";
+
+                ProcessStartInfo processStartInfo = new ProcessStartInfo();
+                processStartInfo.UseShellExecute = false;
+                processStartInfo.RedirectStandardInput = true;
+                processStartInfo.RedirectStandardOutput = true;
+                processStartInfo.FileName = "java.exe";
+                processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript";
+                if (!enableJavaWatchdog)
+                    processStartInfo.Arguments += " --disableWatchdog";
+
+                try
                 {
-                    errorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
-                    state = State.ERROR;                                        
+                    process = Process.Start(processStartInfo);
+                    if (process == null)
+                    {
+                        errorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
+                        state = State.ERROR;
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    errorMessage = "Exception caught while starting the process : " + e.Message;
+                    state = State.ERROR;
                     return;
                 }
-            }
-            catch (Exception e)
+
+                ownsProcess = true;
+
+                readerProcessOutput = process.StandardOutput;
+            }                                    
+            else            
             {
-                errorMessage = "Exception caught while starting the process : " + e.Message;
-                state = State.ERROR;
-                return;
-            }
+                try
+                {
+                    client = new TcpClient("localhost", bindToPort);
 
-            bool stopListening = false;
+                    // do not change the state, let's switch to the new stream and wait for a status message to do so
+                    readerProcessOutput = new StreamReader(client.GetStream());
+                    writerProcessInput = new StreamWriter(client.GetStream());                    
+                }
+                catch (Exception e)
+                {
+                    errorMessage = "Unable to bind to forced port " + bindToPort;
+                    state = State.ERROR;
+                    return;
+                }
+            }            
 
-            progress = 0.0;            
-
-            while (process != null && !process.HasExited && !stopListening)
+            while (readerProcessOutput != null && !stopListening)
             {                
-                Task<string> readLineTask = process.StandardOutput.ReadLineAsync();
+                Task<string> readLineTask = readerProcessOutput.ReadLineAsync();
 
                 if (readLineTask.Wait(10000))   // timeout after 10s
                 {
@@ -166,7 +210,39 @@ namespace Capsis.Handler
                             ArtScriptMessage msg = JsonConvert.DeserializeObject<ArtScriptMessage>(line);
                             if (msg != null)
                             {
-                                if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS)))
+                                if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_PORT)))
+                                {   // this is a special message : it tells the current process to switch the communication to port x
+                                    lock (this)
+                                    {
+                                        try
+                                        {
+                                            int port = Int32.Parse(msg.payload);
+
+                                            client = new TcpClient("localhost", port);
+
+                                            // do not change the state, let's switch to the new stream and wait for a status message to do so
+                                            readerProcessOutput = new StreamReader(client.GetStream());
+                                            writerProcessInput = new StreamWriter(client.GetStream());
+                                        }
+                                        catch (Exception e) 
+                                        {
+                                            Console.WriteLine("Cannot establish connection with process on port " + msg.payload + ".  Aborting.");
+                                            try
+                                            {
+                                                process.Kill();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                                                state = State.ERROR;
+                                                return;
+                                            }
+                                            state = State.ERROR;
+                                            stopListening = true;
+                                        }
+                                    }
+                                }
+                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS)))
                                 {
                                     lock (this)
                                     {
@@ -186,7 +262,8 @@ namespace Capsis.Handler
                                     lock (this)
                                     {
                                         stopListening = true;
-                                        process.WaitForExit();
+                                        if (ownsProcess)
+                                            process.WaitForExit();
                                         state = State.READY;
                                     }
                                 }
@@ -216,20 +293,27 @@ namespace Capsis.Handler
                 }
                 else
                 {   // process is non-responsive
-                    Console.WriteLine("Process " + process.Id + " is unresponsive.  Killing it.");
-                    try { 
-                        process.Kill(); 
-                    } catch (Exception ex) {
-                        errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                    if (ownsProcess)
+                    {
+                        Console.WriteLine("Process " + process.Id + " is unresponsive.  Killing it.");
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch (Exception ex)
+                        {
+                            errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                            state = State.ERROR;
+                            return;
+                        }
+                        readerProcessOutput = null;
                         state = State.ERROR;
-                        return;
-                    }                    
-                    state = State.ERROR;
-                    stopListening = true;
+                        stopListening = true;
+                    }
                 }
             }
 
-            if (process != null && process.HasExited)  // at this point, the process should be running
+            if (ownsProcess && process != null && process.HasExited)  // at this point, the process should be running
             {
                 errorMessage = "Process terminated unexpectedly in directory " + capsisPath;
                 state = State.ERROR;
@@ -239,7 +323,7 @@ namespace Capsis.Handler
         
         public void Stop()
         {
-            if (process == null)
+            if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             lock (this)
@@ -255,7 +339,7 @@ namespace Capsis.Handler
 
         public void Simulate(string variant, string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
         {
-            if (process == null)
+            if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             Enum.Parse(typeof(Variant), variant);
@@ -263,7 +347,8 @@ namespace Capsis.Handler
             lock (this)
             {
                 // save csv file to data directory
-                string filename = dataDirectory + Path.AltDirectorySeparatorChar + process.Id.ToString() + ".csv";
+                Guid fileGUID = Guid.NewGuid();
+                string filename = dataDirectory + Path.AltDirectorySeparatorChar + fileGUID.ToString() + ".csv";
                 File.WriteAllText(filename, data);
 
                 state = State.OPERATION_PENDING;
@@ -283,7 +368,7 @@ namespace Capsis.Handler
 
         public List<string> VariantSpecies(string variant, VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
         {
-            if (process == null)
+            if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             lock (this)
