@@ -168,7 +168,7 @@ namespace Capsis.Handler
                                         }
                                         
                                         ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
-                                        writerProcessInput.WriteLine(JsonConvert.SerializeObject(reply));
+                                        process.StandardInput.WriteLine(JsonConvert.SerializeObject(reply));
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))
