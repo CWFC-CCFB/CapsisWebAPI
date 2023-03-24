@@ -103,6 +103,16 @@ namespace Capsis.Handler
             }
         }
 
+        void SendMessage(ArtScriptMessage msg)
+        {
+            if (process == null)
+                throw new InvalidOperationException("Cannot send message to a null process");
+
+            process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+
+            process.StandardInput.Flush();
+        }
+
         void LaunchProcess()
         {
             string classPathOption = "-cp ";
@@ -149,7 +159,7 @@ namespace Capsis.Handler
                     string line = readLineTask.Result;
                     if (line != null)
                     {
-                        //Console.WriteLine("RECEIVED :" + line);
+                        Console.WriteLine("RECEIVED :" + line);
 
                         try
                         {
@@ -168,7 +178,7 @@ namespace Capsis.Handler
                                         }
                                         
                                         ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
-                                        process.StandardInput.WriteLine(JsonConvert.SerializeObject(reply));
+                                        SendMessage(reply);
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))
@@ -236,7 +246,7 @@ namespace Capsis.Handler
             {
                 state = State.OPERATION_PENDING;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageStop();
-                process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+                SendMessage(msg);
             }
 
             while (state == State.OPERATION_PENDING)
@@ -259,7 +269,7 @@ namespace Capsis.Handler
                 state = State.OPERATION_PENDING;
                 result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, filename);
-                process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+                SendMessage(msg);
             }
 
             while (state == State.OPERATION_PENDING)
@@ -281,7 +291,7 @@ namespace Capsis.Handler
                 state = State.OPERATION_PENDING;
                 result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetSpeciesOfType(type);
-                process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+                SendMessage(msg);
             }
 
             while (state == State.OPERATION_PENDING)
@@ -307,7 +317,7 @@ namespace Capsis.Handler
                 state = State.OPERATION_PENDING;
                 result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetFieldList();
-                process.StandardInput.WriteLine(JsonConvert.SerializeObject(msg));
+                SendMessage(msg);
             }
 
             while (state == State.OPERATION_PENDING)
