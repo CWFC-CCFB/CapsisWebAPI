@@ -69,5 +69,10 @@ namespace Capsis.Handler
         {
             return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_GET_FIELDS), null);
         }
+
+        public static ArtScriptMessage CreateMessageStatus()
+        {
+            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS), null);
+        }
     }
 }

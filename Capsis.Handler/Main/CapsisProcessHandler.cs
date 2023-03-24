@@ -166,6 +166,9 @@ namespace Capsis.Handler
                                         {
                                             progress = Double.Parse(msg.payload);   
                                         }
+                                        
+                                        ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
+                                        writerProcessInput.WriteLine(JsonConvert.SerializeObject(reply));
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))
@@ -323,6 +326,8 @@ namespace Capsis.Handler
                 return state == State.READY;
             }
         }
+
+        public bool isResultAvailable() { return result != null; }
 
         public SimulationStatus GetSimulationStatus()
         {
