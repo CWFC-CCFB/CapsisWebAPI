@@ -53,7 +53,7 @@ namespace Capsis.Handler
 
         string capsisPath;
         string dataDirectory;
-        bool enableJavaWatchdog;
+        bool disableJavaWatchdog;
 
         double progress;     // value between [0,1] only valid when in STARTED mode
 
@@ -69,7 +69,7 @@ namespace Capsis.Handler
 
         StreamWriter? writerProcessInput;
 
-        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool enableJavaWatchdog = true, int bindToPort = 0)
+        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool disableJavaWatchdog = false, int bindToPort = 0)
         {            
             this.capsisPath = capsisPath;
             this.dataDirectory = dataDirectory;
@@ -79,7 +79,7 @@ namespace Capsis.Handler
             ownsProcess = false;
             result = null;
             writerProcessInput = null;
-            this.enableJavaWatchdog = enableJavaWatchdog;
+            this.disableJavaWatchdog = disableJavaWatchdog;
             this.bindToPort = bindToPort;
         }        
 
@@ -152,7 +152,7 @@ namespace Capsis.Handler
                 processStartInfo.RedirectStandardOutput = true;
                 processStartInfo.FileName = "java.exe";
                 processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript";
-                if (!enableJavaWatchdog)
+                if (disableJavaWatchdog)
                     processStartInfo.Arguments += " --disableWatchdog";
 
                 try
@@ -333,7 +333,7 @@ namespace Capsis.Handler
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING)
+            while (state == State.OPERATION_PENDING || !process.HasExited)
                 Thread.Sleep(1);
         }
 
