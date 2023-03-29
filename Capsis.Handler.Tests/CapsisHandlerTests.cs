@@ -95,7 +95,8 @@ namespace Capsis.Handler
             while (!handler.isResultAvailable())
             {
                 double newProgress = handler.getProgress();
-                Assert.IsTrue(newProgress >= progress);
+                Assert.IsTrue(newProgress >= progress, "Progress should always increase only");
+                progress = newProgress;
                 Thread.Sleep(100);
             }
 
