@@ -61,9 +61,11 @@ namespace Capsis.Handler
 
         State state;
         string errorMessage;   
-        internal Thread? thread;  // will stay null if used in sync mode
+        internal Thread? thread;  
         internal Process? process;
         bool ownsProcess;
+
+        string? csvFilename;
 
         int bindToPort; // if this value is non-zero, then connect directly to this port instead of waiting for the port number to be advertised.  Typically used for debugging.
 
@@ -81,6 +83,7 @@ namespace Capsis.Handler
             writerProcessInput = null;
             this.disableJavaWatchdog = disableJavaWatchdog;
             this.bindToPort = bindToPort;
+            csvFilename = null;
         }        
 
         public State getState() { return state; }
@@ -92,6 +95,8 @@ namespace Capsis.Handler
                 return result;
             }
         }
+
+        public string getCSVFilename() { return csvFilename; }
 
         public void Start()
         {
@@ -293,7 +298,7 @@ namespace Capsis.Handler
                 }
                 else
                 {   // process is non-responsive
-                    if (ownsProcess)
+                    if (ownsProcess && process != null)
                     {
                         Console.WriteLine("Process " + process.Id + " is unresponsive.  Killing it.");
                         try
@@ -337,28 +342,31 @@ namespace Capsis.Handler
                 Thread.Sleep(1);
         }
 
-        public void Simulate(string variant, string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
+        public Guid Simulate(string variant, string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
         {
             if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             Enum.Parse(typeof(Variant), variant);
 
+            Guid guid = Guid.NewGuid();
+
             lock (this)
             {
                 // save csv file to data directory
-                Guid fileGUID = Guid.NewGuid();
-                string filename = dataDirectory + Path.AltDirectorySeparatorChar + fileGUID.ToString() + ".csv";
-                File.WriteAllText(filename, data);
+                csvFilename = dataDirectory + Path.AltDirectorySeparatorChar + guid.ToString() + ".csv";
+                File.WriteAllText(csvFilename, data);
 
                 state = State.OPERATION_PENDING;
                 result = null;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, filename);
+                ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
                 SendMessage(msg);
             }
 
             while (state == State.OPERATION_PENDING)
                 Thread.Sleep(1);
+
+            return guid;
         }
 
         public List<string> VariantList()

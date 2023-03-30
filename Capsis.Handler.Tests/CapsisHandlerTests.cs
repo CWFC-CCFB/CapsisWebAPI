@@ -146,5 +146,29 @@ namespace Capsis.Handler
 
             Assert.IsNull(handler.process);
         }
+
+        [TestMethod]
+        public void TestCapsisHandlerDefaultOutputRequest()
+        {
+            CapsisProcessHandler handler = new(getCapsisPath(), getDataDirectory());
+            handler.Start();
+
+            // read the CSV data
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
+            while (!handler.isResultAvailable())
+            {
+                Thread.Sleep(100);
+            }
+
+            CapsisProcessHandler.SimulationStatus status = handler.GetSimulationStatus();
+
+            Assert.AreEqual(2, status.result.outputTypes.Count, "Default output request should lead to two outputs");
+            Assert.IsTrue(status.result.outputTypes.Contains("AliveVolume_Broadleaved"), "Default output request should lead to AliveVolume_Broadleaved being output");
+            Assert.IsTrue(status.result.outputTypes.Contains("AliveVolume_Coniferous"), "Default output request should lead to AliveVolume_Coniferous being output");
+
+            handler.Stop();
+        }
     }
 }

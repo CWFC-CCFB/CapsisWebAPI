@@ -13,7 +13,7 @@ using System.Web;
 
 try
 {
-    CapsisProcessHandler handler = new("W:/NRCan/java/capsis", "W:/NRCan/java/ArtScriptTests", false, 54941);
+    CapsisProcessHandler handler = new("W:/NRCan/java/capsis", "W:/NRCan/java/ArtScriptTests", true);
     handler.Start();
 
     // read the CSV data

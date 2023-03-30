@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Capsis.Handler", "Capsis.Ha
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CapsisWebAPI", "CapsisWebAPI\CapsisWebAPI.csproj", "{12BAB147-4BA8-4A12-A90B-5C23D88C8ABE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Capsis.Handler.Tests", "Capsis.Handler.Tests\Capsis.Handler.Tests.csproj", "{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Capsis.Handler.Tests", "Capsis.Handler.Tests\Capsis.Handler.Tests.csproj", "{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CapsisWebAPI.Tests", "CapsisWebAPI.Tests\CapsisWebAPI.Tests.csproj", "{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Data;
 using Microsoft.Extensions.Configuration;
 using Capsis.Handler.Main;
+using System.Net.NetworkInformation;
 
 namespace CapsisWebAPI.Controllers
 {
@@ -86,7 +87,7 @@ namespace CapsisWebAPI.Controllers
         
         [HttpPost]
         [Route("Simulate")]
-        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Capsis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
+        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Artemis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
         {
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
@@ -103,9 +104,8 @@ namespace CapsisWebAPI.Controllers
                 if (initialYear == -1)
                     initialYear = DateTime.Now.Year;
 
-                handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
+                Guid newTaskGuid = handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
 
-                Guid newTaskGuid = Guid.NewGuid();
                 handlerDict[newTaskGuid.ToString()] = handler;
 
                 return Ok(newTaskGuid.ToString());
@@ -122,7 +122,13 @@ namespace CapsisWebAPI.Controllers
         {
             try
             {
-                return Ok(handlerDict[taskID].GetSimulationStatus());
+                CapsisProcessHandler.SimulationStatus status = handlerDict[taskID].GetSimulationStatus();
+                if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                {   // remove the task from the table once the results are being successfully returned                                                            
+                    handlerDict.Remove(taskID);
+                }
+
+                return Ok(status);
             }
             catch (Exception e)
             {
