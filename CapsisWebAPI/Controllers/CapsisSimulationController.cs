@@ -137,12 +137,13 @@ namespace CapsisWebAPI.Controllers
         }
 
         [HttpGet]
-        [Route("TaskCancel")]
-        public IActionResult TaskCancel([Required][FromQuery] string taskID)
+        [Route("Cancel")]
+        public IActionResult Cancel([Required][FromQuery] string taskID)
         {
             try
             {
                 handlerDict[taskID].Stop();
+                handlerDict.Remove(taskID);
                 return Ok();
             }
             catch (Exception e)

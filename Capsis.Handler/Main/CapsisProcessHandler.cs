@@ -250,9 +250,7 @@ namespace Capsis.Handler
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS)))
                                 {
                                     lock (this)
-                                    {
-                                        state = State.READY;
-
+                                    {                                        
                                         if (msg.payload != null)
                                         {
                                             progress = Double.Parse(msg.payload);   
@@ -260,6 +258,13 @@ namespace Capsis.Handler
                                         
                                         ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
                                         SendMessage(reply);
+                                    }
+                                }
+                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_SIMULATION_STARTED)))
+                                {
+                                    lock (this)
+                                    {
+                                        state = State.READY;
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))

@@ -50,5 +50,37 @@ namespace CapsisWebAPI
             BadRequestObjectResult BROresult = (BadRequestObjectResult)result;
             Assert.AreEqual(BROresult.StatusCode, 400, "Expected a 400 status code");
         }
+
+        [TestMethod]
+        public void Simulate_CancelTest()
+        {
+            CapsisSimulationController controller = new(null);
+
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            string fieldMatchesJSON = JsonConvert.SerializeObject(fieldMatches);
+
+            IActionResult result = controller.Simulate(data, 100, validOutputRequest, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
+            Assert.AreEqual("OkObjectResult", result.GetType().Name, "Did not receive an OkObjectResult result as expected but " + result.GetType().Name);   // OkObjectResult is expected because this call should succeed
+            OkObjectResult oresult = (OkObjectResult)result;
+            Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
+
+            Assert.IsNotNull(oresult.Value);
+            string taskID = (string)oresult.Value;
+
+            Thread.Sleep(2000);
+
+            result = controller.Cancel(taskID);
+
+            Assert.AreEqual("OkResult", result.GetType().Name, "Did not receive an OkResult result as expected but " + result.GetType().Name);   // OkObjectResult is expected because this call should succeed
+            OkResult okresult = (OkResult)result;
+            Assert.AreEqual(okresult.StatusCode, 200, "Expected a 200 status code");
+
+            // now also check that this task has been removed from the task table
+            result = controller.SimulationStatus(taskID);
+            Assert.AreEqual("BadRequestObjectResult", result.GetType().Name, "Did not receive a BadRequestObjectResult result as expected but " + result.GetType().Name);   // BadRequestObjectResult is expected because this call should fail
+            BadRequestObjectResult BROresult = (BadRequestObjectResult)result;
+            Assert.AreEqual(BROresult.StatusCode, 400, "Expected a 400 status code");
+        }
     }
 }
