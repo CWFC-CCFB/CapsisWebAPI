@@ -13,13 +13,13 @@ using System.Web;
 
 try
 {
-    CapsisProcessHandler handler = new("W:/NRCan/java/capsis", "W:/NRCan/java/ArtScriptTests", true);
+    CapsisProcessHandler handler = new("W:/NRCan/java/capsis", "W:/NRCan/java/ArtScriptTests");
     handler.Start();
 
     // read the CSV data
-    string data = File.ReadAllText("W:/NRCan/cs/CapsisWebAPI/Capsis.Handler.Tests/data/STR_RE2_70.csv");
+    string data = File.ReadAllText("W:/NRCan/cs/CapsisWebAPI/Capsis.Handler.Tests/data/STR_RE2_120.csv");
     int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-    handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
+    handler.Simulate("Artemis", data, null, 2000, true, 500, "Stand", "NoChange", 2080, fieldMatches);
     //Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is still alive
     //Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is still responding            
     //Assert.AreEqual(CapsisProcessHandler.State.READY, handler.getState());  // ensure handler is still in READY state (after an async call)
