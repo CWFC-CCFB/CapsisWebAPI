@@ -36,7 +36,7 @@ namespace CapsisWebAPI.Controllers
         [Route("VariantList")]
         public IActionResult VariantList()
         {
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
+            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);                
             return Ok(handler.VariantList());   // no need to start the process in this particular case since the variant list is not queried from Capsis
         }
         
@@ -49,7 +49,9 @@ namespace CapsisWebAPI.Controllers
                 CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
                 handler.Start();
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
-                return Ok(handler.VariantSpecies(variant, enumType));                
+                List<string> result = handler.VariantSpecies(variant, enumType);
+                handler.Stop();
+                return Ok(result);                
             }
             catch (Exception ex)
             {
@@ -76,7 +78,9 @@ namespace CapsisWebAPI.Controllers
 
             try
             {
-                return Ok(handler.VariantFieldList(variant));
+                List<ImportFieldElementIDCard> result = handler.VariantFieldList(variant);
+                handler.Stop();
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -124,6 +128,7 @@ namespace CapsisWebAPI.Controllers
                 CapsisProcessHandler.SimulationStatus status = handlerDict[taskID].GetSimulationStatus();
                 if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
                 {   // remove the task from the table once the results are being successfully returned                                                            
+                    handlerDict[taskID].Stop();
                     handlerDict.Remove(taskID);
                 }
 
