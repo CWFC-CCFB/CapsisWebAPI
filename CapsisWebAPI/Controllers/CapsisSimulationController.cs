@@ -19,12 +19,11 @@ namespace CapsisWebAPI.Controllers
         static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
         static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
 
-        Dictionary<string, CapsisProcessHandler> handlerDict;
+        static Dictionary<string, CapsisProcessHandler> handlerDict = new Dictionary<string, CapsisProcessHandler>();
 
         public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
         {            
-            _logger = logger;
-            handlerDict = new Dictionary<string, CapsisProcessHandler>();
+            _logger = logger;            
         }
 
         protected void LogRequest(HttpRequest req)
