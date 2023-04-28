@@ -441,14 +441,13 @@ namespace Capsis.Handler
         {
             lock (this)
             {
-                if (state == State.READY && result != null)
+                if (state == State.READY)
                 {
-                    return new SimulationStatus(SimulationStatus.COMPLETED, null, progress, result);
-                }
-                else if (state == State.OPERATION_PENDING)
-                {
-                    return new SimulationStatus(SimulationStatus.IN_PROGRESS, null, progress, null);
-                }
+                    if (result != null)
+                        return new SimulationStatus(SimulationStatus.COMPLETED, null, progress, result);
+                    else
+                        return new SimulationStatus(SimulationStatus.IN_PROGRESS, null, progress, null);
+                }                
                 else if (state == State.STOPPED)
                 {
                     return new SimulationStatus(SimulationStatus.STOPPED, null, 0.0, null);
