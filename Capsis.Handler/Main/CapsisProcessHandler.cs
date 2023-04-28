@@ -70,6 +70,7 @@ namespace Capsis.Handler
         int bindToPort; // if this value is non-zero, then connect directly to this port instead of waiting for the port number to be advertised.  Typically used for debugging.
 
         StreamWriter? writerProcessInput;
+        StreamReader? processStdOut = null;
 
         public CapsisProcessHandler(string capsisPath, string dataDirectory, bool disableJavaWatchdog = false, int bindToPort = 0)
         {            
@@ -134,6 +135,18 @@ namespace Capsis.Handler
 
                 Console.WriteLine("Sending message : " + jsonMSG);
             }
+        }
+
+        void StdOutPrinter()
+        {
+            Console.WriteLine(DateTime.Now.ToString() + " StdOutPrinter starting");
+
+            while (processStdOut != null)
+            {
+                Console.WriteLine("_JAVA : " + DateTime.Now.ToString() + " :" + processStdOut.ReadLine());
+            }
+
+            Console.WriteLine(DateTime.Now.ToString() + " StdOutPrinter stopping");
         }
 
         void LaunchProcess()
@@ -208,7 +221,7 @@ namespace Capsis.Handler
                     string line = readLineTask.Result;
                     if (line != null)
                     {
-                        Console.WriteLine("RECEIVED :" + line);
+                        Console.WriteLine(DateTime.Now.ToString() + " RECEIVED :" + line);
 
                         try
                         {
@@ -226,8 +239,11 @@ namespace Capsis.Handler
                                             client = new TcpClient("localhost", port);
 
                                             // do not change the state, let's switch to the new stream and wait for a status message to do so
+                                            processStdOut = readerProcessOutput;
                                             readerProcessOutput = new StreamReader(client.GetStream());
                                             writerProcessInput = new StreamWriter(client.GetStream());
+                                            Thread stdoutWriter = new Thread(new ThreadStart(StdOutPrinter));
+                                            stdoutWriter.Start();
                                         }
                                         catch (Exception e) 
                                         {
@@ -271,6 +287,7 @@ namespace Capsis.Handler
                                 {
                                     lock (this)
                                     {
+                                        processStdOut = null;
                                         stopListening = true;
                                         if (ownsProcess)
                                             process.WaitForExit();
@@ -305,7 +322,7 @@ namespace Capsis.Handler
                 {   // process is non-responsive
                     if (ownsProcess && process != null)
                     {
-                        Console.WriteLine("Process " + process.Id + " is unresponsive.  Killing it.");
+                        Console.WriteLine(DateTime.Now.ToString() + " Process " + process.Id + " is unresponsive.  Killing it.");
                         try
                         {
                             process.Kill();
@@ -316,6 +333,7 @@ namespace Capsis.Handler
                             state = State.ERROR;
                             return;
                         }
+                        processStdOut = null;
                         readerProcessOutput = null;
                         state = State.ERROR;
                         stopListening = true;
@@ -343,7 +361,7 @@ namespace Capsis.Handler
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING || !process.HasExited)
+            while (state == State.OPERATION_PENDING || (process != null && !process.HasExited))
                 Thread.Sleep(1);
         }
 
