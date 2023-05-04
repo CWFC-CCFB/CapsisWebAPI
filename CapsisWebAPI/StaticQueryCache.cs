@@ -4,6 +4,10 @@ using Capsis.Handler.Requests;
 
 namespace CapsisWebAPI
 {
+    /// <summary>
+    /// This class is served as a static storage for common requests that do not necessarily require a process to run.
+    /// It is created and populated at startup and then used for other requests than Simulate-related requests
+    /// </summary>
     public class StaticQueryCache
     {
         public StaticQueryCache()
@@ -29,6 +33,12 @@ namespace CapsisWebAPI
         public Dictionary<string, VariantData> variantDataMap;
         public List<RequestType> requestTypes;
 
+        /// <summary>
+        /// Fills the static cache from a temporary handler
+        /// </summary>
+        /// <param name="CapsisPath"></param>
+        /// <param name="DataDirectory"></param>
+        /// <returns>The StaticQueryCache created</returns>
         public static StaticQueryCache FillStaticCache(string CapsisPath, string DataDirectory)
         {
             StaticQueryCache staticQueryCache = new StaticQueryCache();
