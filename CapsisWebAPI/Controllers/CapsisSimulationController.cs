@@ -13,13 +13,17 @@ namespace CapsisWebAPI.Controllers
     [Route("[controller]")]
     [Produces("application/json")]
     public class CapsisSimulationController : ControllerBase
-    {        
+    {               
         private readonly ILogger<CapsisSimulationController> _logger;
         
-        static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
-        static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
+        public static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
+        public static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
 
         static Dictionary<string, CapsisProcessHandler> handlerDict = new Dictionary<string, CapsisProcessHandler>();
+
+        static StaticQueryCache? staticQueryCache;
+
+        public static void setStaticQueryCache(StaticQueryCache cache) { staticQueryCache = cache; }
 
         public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
         {            
@@ -36,8 +40,7 @@ namespace CapsisWebAPI.Controllers
         [Route("VariantList")]
         public IActionResult VariantList()
         {
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);                
-            return Ok(handler.VariantList());   // no need to start the process in this particular case since the variant list is not queried from Capsis
+            return Ok(staticQueryCache.variantDataMap.Keys.ToList());   
         }
         
         [HttpGet]
@@ -45,13 +48,9 @@ namespace CapsisWebAPI.Controllers
         public IActionResult VariantSpecies([Required][FromQuery] String variant = "Artemis", [FromQuery] String type = "All")
         {            
             try
-            {
-                CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
-                handler.Start();
+            {                
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
-                List<string> result = handler.VariantSpecies(variant, enumType);
-                handler.Stop();
-                return Ok(result);                
+                return Ok(staticQueryCache.variantDataMap[variant].speciesMap[enumType]);                
             }
             catch (Exception ex)
             {
@@ -63,24 +62,16 @@ namespace CapsisWebAPI.Controllers
         [Route("OutputRequestTypes")]
         public IActionResult OutputRequestTypes()
         {
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
-
-            return Ok(handler.OutputRequestTypes());
+            return Ok(staticQueryCache.requestTypes);
         }
         
         [HttpGet]
         [Route("VariantFields")]
         public IActionResult VariantFields([Required][FromQuery] String variant = "Artemis")
-        {
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
-
-            handler.Start();
-
+        {            
             try
             {
-                List<ImportFieldElementIDCard> result = handler.VariantFieldList(variant);
-                handler.Stop();
-                return Ok(result);
+                return Ok(staticQueryCache.variantDataMap[variant].fields);
             }
             catch (Exception ex)
             {
