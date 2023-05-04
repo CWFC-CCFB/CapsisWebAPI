@@ -29,6 +29,7 @@ string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json"
 string DataDirectorySweeperMins = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectorySweeperMins"];
 DirectorySweeper sweeper = new DirectorySweeper(DataDirectory, int.Parse(DataDirectorySweeperMins));
 
-CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(CapsisSimulationController.CapsisPath, CapsisSimulationController.DataDirectory));
+string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
+CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(CapsisPath, DataDirectory));
 
 app.Run();
