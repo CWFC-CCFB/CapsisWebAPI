@@ -6,6 +6,8 @@ using System.Data;
 using Microsoft.Extensions.Configuration;
 using Capsis.Handler.Main;
 using System.Net.NetworkInformation;
+using System.Threading.Tasks;
+using static Capsis.Handler.CapsisProcessHandler;
 
 namespace CapsisWebAPI.Controllers
 {
@@ -18,8 +20,10 @@ namespace CapsisWebAPI.Controllers
         
         public static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
         public static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
+        public static readonly int MaxProcessNumber = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["MaxProcessNumber"]);
 
         static Dictionary<string, CapsisProcessHandler> handlerDict = new Dictionary<string, CapsisProcessHandler>();
+        static Dictionary<string, SimulationStatus?> resultDict = new Dictionary<string, SimulationStatus?>();
 
         static StaticQueryCache? staticQueryCache;
 
@@ -34,6 +38,23 @@ namespace CapsisWebAPI.Controllers
         {
             if (_logger != null)
                 _logger.LogInformation("Received request " + req.Method + " " + req.Path + req.QueryString + " from " + req.Headers["Referer"]);
+        }
+
+        protected void processHandlerDict()
+        {
+            lock (resultDict)
+            {
+                foreach (KeyValuePair<string, CapsisProcessHandler> entry in handlerDict)
+                {
+                    CapsisProcessHandler.SimulationStatus status = entry.Value.GetSimulationStatus();
+                    resultDict[entry.Key] = status;
+                    if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    {   // remove the task from the table once the results are being successfully returned                                                            
+                        entry.Value.Stop();
+                        handlerDict.Remove(entry.Key);                        
+                    }
+                }
+            }
         }
 
         [HttpGet]
@@ -85,24 +106,33 @@ namespace CapsisWebAPI.Controllers
         {
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
-
+            
             try
             {
-                List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
-                List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
+                lock (handlerDict)
+                {
+                    processHandlerDict();
 
-                CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
+                    if (handlerDict.Count >= MaxProcessNumber)
+                        return StatusCode(429);     // Too Many Requests
 
-                handler.Start();
+                    List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
+                    List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
 
-                if (initialYear == -1)
-                    initialYear = DateTime.Now.Year;
+                    CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
 
-                Guid newTaskGuid = handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
+                    handler.Start();
 
-                handlerDict[newTaskGuid.ToString()] = handler;
+                    if (initialYear == -1)
+                        initialYear = DateTime.Now.Year;
 
-                return Ok(newTaskGuid.ToString());
+                    Guid newTaskGuid = handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
+
+                    handlerDict[newTaskGuid.ToString()] = handler;
+                    resultDict[newTaskGuid.ToString()] = handler.GetSimulationStatus();
+
+                    return Ok(newTaskGuid.ToString());
+                }
             }
             catch (Exception e)
             {
@@ -113,17 +143,22 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("TaskStatus")]
         public IActionResult SimulationStatus([Required][FromQuery] string taskID)
-        {
+        {            
             try
             {
-                CapsisProcessHandler.SimulationStatus status = handlerDict[taskID].GetSimulationStatus();
-                if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
-                {   // remove the task from the table once the results are being successfully returned                                                            
-                    handlerDict[taskID].Stop();
-                    handlerDict.Remove(taskID);
+                lock (handlerDict)
+                {
+                    processHandlerDict();
+                    
+                    CapsisProcessHandler.SimulationStatus status = resultDict[taskID];
+                    if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    {
+                        // remove the task from the table once the results are being successfully returned                                                            
+                        resultDict.Remove(taskID);
+                    }
+                    
+                    return Ok(status);
                 }
-
-                return Ok(status);
             }
             catch (Exception e)
             {
@@ -134,16 +169,40 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("Cancel")]
         public IActionResult Cancel([Required][FromQuery] string taskID)
-        {
+        {            
             try
             {
-                handlerDict[taskID].Stop();
-                handlerDict.Remove(taskID);
-                return Ok();
+                lock (handlerDict)
+                {
+                    processHandlerDict();
+
+                    bool found = false;
+                    // at this point, either the taskID is present in the handlerDict (not finished), the resultDict(finished) or not present (invalid)
+                    if (handlerDict.ContainsKey(taskID))
+                    {
+                        handlerDict[taskID].Stop();
+                        handlerDict.Remove(taskID);
+                        resultDict.Remove(taskID);
+                        found = true;
+                    }
+                    else
+                    {
+                        if (resultDict.ContainsKey(taskID))
+                        {
+                            resultDict.Remove(taskID);
+                            found = true;
+                        }
+                    }
+
+                    if (found)
+                        return Ok();
+                    else
+                        return BadRequest("Unrecognized taskID");
+                }
             }
             catch (Exception e)
             {
-                return BadRequest("Unrecognized taskID");
+                return StatusCode(500);
             }
         }
     }
