@@ -5,6 +5,13 @@ cd ..
 git pull 
 cd CapsisWebAPI
 
+REM Deploy Capsis installation
+pushd %CAPSISWEBAPI_CAPSIS_PATH%
+ant installer-export
+robocopy bin\Release\net6.0\win-x64\publish c:\inetpub\%1\capsis /E 
+popd
+
+REM build app
 dotnet publish -c Release -r win-x64 
 if %errorlevel% neq 0 exit /b %errorlevel%
 
