@@ -35,14 +35,20 @@ git clone -b develop https://github.com/CWFC-CCFB/CapsisWebAPI.git subfolder
 ```
 note : If subfolder is not specified, git will automatically create a subfolder named CapsisWebAPI into the desired location
 4. to ensure the build system is working properly, cd into the CapsisWebAPI subfolder of the project folder and launch command : 
+```
 dotnet publish -c Release -r win-x64
+```
 
 This will result in the app files being deployed in the CapsisWebAPI\bin\Release\net5.0\win-x64\publish folder
 5. Test the app launch by executing the publish command again as in step 4
-dotnet publish -c Release -r win-x64 --self-contained
+```
+dotnet publish -c Release -r win-x64 
+```
 
 6. cd into the publish subfolder (as specified in step 4) then launch :
+```
 	WebAPI.exe
+```
 
 This should start the service (which will probably crash because it needs its capsis dependency to launch properly.  
 
@@ -132,9 +138,9 @@ In our case we will perform the following steps :
 
 1. Install the Application Request Routing and URL Rewrite modules to IIS 
 2. Create a folder in the inetpub folder named "RootProxyCapsisWebAPI_A" and add reading permissions to IIS_IUSRS (see IIS CONFIGURATION previous section)
-3. Using IIS Manager, add a new site named "RootProxyCapsisWebAPI_A" bound to port 8080
+3. Using IIS Manager, add a new site named "RootProxyCapsisWebAPI_A" bound to port 8100
 4. Create a file named web.config into the RootProxyCapsisWebAPI_A folder containing the following:
-
+```
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <system.webServer>
@@ -159,18 +165,18 @@ In our case we will perform the following steps :
         </rewrite>
     </system.webServer>
 </configuration>
-
+```
 5. Ensure the new file has the correct READ access rights for user IIS_IUSRS
 6. Create the same structure for RootProxyCapsisWebAPI_B and set its rewrite destination to 8102 instead of 8101 in the web.config file.
 7. Add a new rule to the base RootProxy's server by adding this rule to its web.config file : 
-
+```
 <rule name="ReverseProxyCapsisWebAPIRoute" enabled="true" stopProcessing="true">
 	<match url="^CapsisWebAPI/(.*)" />
 	<conditions logicalGrouping="MatchAll" trackAllCaptures="false" />
 	<action type="Rewrite" url="http://localhost:8100/CapsisWebAPI/{R:1}" />
 </rule>
-
+```
 Note : This rule catches all requests done with a CapsisWebAPI prefix and forwards it to the 8100 port while preserving the CapsisWebAPI prefix in the request
 
-Once both RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B are configured, the way to switch between RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B will be enabling one of the two RootPRoxy sites.  
-Both sites cannot be active at the same time because they both are bound to port 8080.
+Once both RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B are configured, the way to switch between RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B will be enabling one of the two RootProxy sites.  
+Both sites cannot be active at the same time because they both are bound to port 8100.
