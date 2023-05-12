@@ -8,6 +8,7 @@ using Capsis.Handler.Main;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using static Capsis.Handler.CapsisProcessHandler;
+using System.Reflection;
 
 namespace CapsisWebAPI.Controllers
 {
@@ -204,6 +205,15 @@ namespace CapsisWebAPI.Controllers
             {
                 return StatusCode(500);
             }
+        }
+
+        [HttpGet]
+        [Route("")]
+        public IActionResult Index()
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            result["version"] = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            return Ok(result);
         }
     }
 }
