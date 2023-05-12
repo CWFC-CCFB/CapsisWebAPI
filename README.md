@@ -171,7 +171,7 @@ In our case we will perform the following steps :
 7. Add a new rule to the base RootProxy's server by adding this rule to its web.config file : 
 ```
 <rule name="ReverseProxyCapsisWebAPIRoute" enabled="true" stopProcessing="true">
-	<match url="^CapsisWebAPI/(.*)" />
+	<match url="^CapsisWebAPI(.*)" />
 	<conditions logicalGrouping="MatchAll" trackAllCaptures="false" />
 	<action type="Rewrite" url="http://localhost:8100/CapsisWebAPI/{R:1}" />
 </rule>
