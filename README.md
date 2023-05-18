@@ -181,7 +181,7 @@ In our case we will perform the following steps :
 	<action type="Rewrite" url="http://localhost:8100/CapsisWebAPI/{R:1}" />
 </rule>
 ```
-Note : This rule catches all requests done with a CapsisWebAPI prefix and forwards it to the 8100 port while preserving the CapsisWebAPI prefix in the request
+Note : This rule catches all requests done with a CapsisWebAPI prefix and forwards it to the 8100 port while preserving the CapsisWebAPI prefix in the request. Make sure that this rule comes before the default rule in the rules list.
 
 Once both RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B are configured, the way to switch between RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B will be enabling one of the two RootProxy sites.  
 Both sites cannot be active at the same time because they both are bound to port 8100.
