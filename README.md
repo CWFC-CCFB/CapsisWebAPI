@@ -50,7 +50,7 @@ dotnet publish -c Release -r win-x64
 	WebAPI.exe
 ```
 
-This should start the service (which will probably crash because it needs its capsis dependency to launch properly.  
+This should start the service (which will probably crash because it needs its capsis dependency to launch properly).  
 
 ## IIS Setup
 
@@ -102,11 +102,16 @@ Create and setup the website folder
 
 ### Startup and test
 1. Copy the build 
-1. Click on the website then click on the Start button on the right panel under "Manage Website" to make sure it is started
-2. Open a browser and use address "server.ip.address" and you should see the CapsisWebAPI home page
+2. Click on the website then click on the Start button on the right panel under "Manage Website" to make sure it is started
+3. Open a browser and use address "server.ip.address" and you should see the CapsisWebAPI home page
 
 ## Updating the .NET application
-
+1. Edit the ./CapsisWebAPI/appsettings.json file using the following : 
+  - "CapsisPath" : already set to the value expected by the batch scripts
+  - "DataDirectory" : already set to the value expected by the batch scripts
+  - "MaxProcessNumber" : the maximum number of java capsis processes that the server should start
+  - "DataDirectorySweeperMins" : the period at which the server should cleanup the data directory for leftover data files
+2. Launch app_update.bat
 The app_update.bat batch file located in the CapsisWebAPI subfolder automatically performs the following steps :
 	1. pulls the latest version from the git current branch
 	2. builds and exports capsis using the ant script (and copies it inside the corresponding inetpub folder)	
@@ -118,7 +123,7 @@ The app_update.bat batch file located in the CapsisWebAPI subfolder automaticall
 Note 1 : Edit the app_update.bat batch file to ensure that the destination IIS folder is correct before using it.
 Note 2 : The batch file must be launched with administrator rights
 
-## Using two consurrent websites
+## Using two concurrent websites
 
 Using two concurrent websites can be useful to deploy a new release canditate to IIS while the current production server is online.  
 Final tests can then be run on the staging server, and when they pass, the release candidate is validated and incoming traffic can be redirected to it.
