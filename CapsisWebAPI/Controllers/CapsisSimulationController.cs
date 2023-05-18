@@ -15,9 +15,10 @@ namespace CapsisWebAPI.Controllers
     [ApiController]
     [Route("[controller]")]
     [Produces("application/json")]
-    public class CapsisWebAPIController : ControllerBase
+    public class CapsisSimulationController : ControllerBase
+
     {               
-        private readonly ILogger<CapsisWebAPIController> _logger;
+        private readonly ILogger<CapsisSimulationController> _logger;
         
         private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
         private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
@@ -30,7 +31,7 @@ namespace CapsisWebAPI.Controllers
 
         public static void setStaticQueryCache(StaticQueryCache cache) { staticQueryCache = cache; }
 
-        public CapsisWebAPIController(ILogger<CapsisWebAPIController> logger)
+        public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
         {            
             _logger = logger;            
         }

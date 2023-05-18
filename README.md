@@ -73,9 +73,10 @@ Create and setup the website folder
 2. Right-click on the new CapsisWebAPI_A folder and select "properties", then go the Security tab
 3. click "Edit", then click "Add" and enter IIS_IUSRS in the box, then click "Check Names" and then OK if the name has been found
 4. Ensure "Read & Execute" is checked for the IIS_IUSRS user then click OK
-5. Create a "capsis" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has read access to this folder
-6. Create a "capsis/var" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has full access (read, write, execute) on this new folder	(used for capsis logging)
-7. Create a "data" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has full access (read, write, execute) on this new folder (used for temporary data files by the CapsisWebAPI)
+5. Create a new folder named "logs" under the "OSMWebAPI_A" folder and use the security tabs to give "Full Control" to it for IIS_IUSRS using the same last steps
+6. Create a "capsis" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has read access to this folder
+7. Create a "capsis/var" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has full access (read, write, execute) on this new folder	(used for capsis logging)
+8. Create a "data" subfolder in the "CapsisWebAPI_A" folder and ensure the IIS_IUSRS user has full access (read, write, execute) on this new folder (used for temporary data files by the CapsisWebAPI)
 
 ### Create the IIS website and Application
 1. Start the "Internet Information Services (IIS) Manager" app
@@ -176,12 +177,12 @@ In our case we will perform the following steps :
 7. Add a new rule to the base RootProxy's server by adding this rule to its web.config file : 
 ```
 <rule name="ReverseProxyCapsisWebAPIRoute" enabled="true" stopProcessing="true">
-	<match url="^CapsisWebAPI/(.*)" />
+	<match url="^CapsisSimulation/(.*)" />
 	<conditions logicalGrouping="MatchAll" trackAllCaptures="false" />
-	<action type="Rewrite" url="http://localhost:8100/CapsisWebAPI/{R:1}" />
+	<action type="Rewrite" url="http://localhost:8100/CapsisSimulation/{R:1}" />
 </rule>
 ```
-Note : This rule catches all requests done with a CapsisWebAPI prefix and forwards it to the 8100 port while preserving the CapsisWebAPI prefix in the request. Make sure that this rule comes before the default rule in the rules list.
+Note : This rule catches all requests done with a CapsisSimulation prefix and forwards it to the 8100 port while preserving the CapsisWebAPI prefix in the request. Make sure that this rule comes before the default rule in the rules list.
 
 Once both RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B are configured, the way to switch between RootProxyCapsisWebAPI_A and RootProxyCapsisWebAPI_B will be enabling one of the two RootProxy sites.  
 Both sites cannot be active at the same time because they both are bound to port 8100.
