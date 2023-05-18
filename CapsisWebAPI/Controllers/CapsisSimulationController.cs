@@ -16,7 +16,6 @@ namespace CapsisWebAPI.Controllers
     [Route("[controller]")]
     [Produces("application/json")]
     public class CapsisSimulationController : ControllerBase
-
     {               
         private readonly ILogger<CapsisSimulationController> _logger;
         
@@ -63,13 +62,19 @@ namespace CapsisWebAPI.Controllers
         [Route("VariantList")]
         public IActionResult VariantList()
         {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             return Ok(staticQueryCache.variantDataMap.Keys.ToList());   
         }
         
         [HttpGet]
         [Route("VariantSpecies")]
         public IActionResult VariantSpecies([Required][FromQuery] String variant = "Artemis", [FromQuery] String type = "All")
-        {            
+        {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             try
             {                
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
@@ -85,13 +90,19 @@ namespace CapsisWebAPI.Controllers
         [Route("OutputRequestTypes")]
         public IActionResult OutputRequestTypes()
         {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             return Ok(staticQueryCache.requestTypes);
         }
         
         [HttpGet]
         [Route("VariantFields")]
         public IActionResult VariantFields([Required][FromQuery] String variant = "Artemis")
-        {            
+        {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             try
             {
                 return Ok(staticQueryCache.variantDataMap[variant].fields);
@@ -145,7 +156,10 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("TaskStatus")]
         public IActionResult SimulationStatus([Required][FromQuery] string taskID)
-        {            
+        {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             try
             {
                 lock (handlerDict)
@@ -171,7 +185,10 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("Cancel")]
         public IActionResult Cancel([Required][FromQuery] string taskID)
-        {            
+        {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             try
             {
                 lock (handlerDict)
@@ -212,6 +229,9 @@ namespace CapsisWebAPI.Controllers
         [Route("")]
         public IActionResult Index()
         {
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             Dictionary<string, object> result = new Dictionary<string, object>();
             result["version"] = Assembly.GetExecutingAssembly().GetName().Version.ToString();
             return Ok(result);
