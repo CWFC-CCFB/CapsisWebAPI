@@ -82,6 +82,7 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
             }
         }
@@ -109,6 +110,7 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
             }
         }
@@ -149,6 +151,7 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception e)
             {
+                _logger.LogError(e.Message);
                 return BadRequest(e.Message);
             }
         }
@@ -178,7 +181,9 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception e)
             {
-                return BadRequest("Unrecognized taskID");
+                string message = "Unrecognized taskID";
+                _logger.LogError(message);
+                return BadRequest(message);
             }
         }
 
@@ -216,11 +221,16 @@ namespace CapsisWebAPI.Controllers
                     if (found)
                         return Ok();
                     else
-                        return BadRequest("Unrecognized taskID");
+                    {
+                        string message = "Unrecognized taskID";
+                        _logger.LogError(message);
+                        return BadRequest(message);
+                    }
                 }
             }
             catch (Exception e)
             {
+                _logger.LogError(e.Message);
                 return StatusCode(500);
             }
         }
