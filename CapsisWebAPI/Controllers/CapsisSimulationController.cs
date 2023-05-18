@@ -30,7 +30,7 @@ namespace CapsisWebAPI.Controllers
 
         public static void setStaticQueryCache(StaticQueryCache cache) { staticQueryCache = cache; }
 
-        public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
+        public CapsisSimulationController(ILogger<CapsisSimulationController>? logger)
         {            
             _logger = logger;            
         }
@@ -227,7 +227,8 @@ namespace CapsisWebAPI.Controllers
                     else
                     {
                         string message = "Unrecognized taskID";
-                        _logger.LogError(message);
+                        if (_logger != null)
+                            _logger.LogError(message);
                         return BadRequest(message);
                     }
                 }
