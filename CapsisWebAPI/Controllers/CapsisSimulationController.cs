@@ -17,7 +17,7 @@ namespace CapsisWebAPI.Controllers
     [Produces("application/json")]
     public class CapsisSimulationController : ControllerBase
     {               
-        private readonly ILogger<CapsisSimulationController> _logger;
+        private readonly ILogger<CapsisSimulationController>? _logger;
         
         private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
         private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
@@ -82,7 +82,8 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
+                if (_logger != null)
+                    _logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
             }
         }
@@ -110,7 +111,8 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
+                if (_logger != null)
+                    _logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
             }
         }
@@ -151,7 +153,8 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e.Message);
+                if (_logger != null)
+                    _logger.LogError(e.Message);
                 return BadRequest(e.Message);
             }
         }
@@ -182,7 +185,8 @@ namespace CapsisWebAPI.Controllers
             catch (Exception e)
             {
                 string message = "Unrecognized taskID";
-                _logger.LogError(message);
+                if (_logger != null)
+                    _logger.LogError(message);
                 return BadRequest(message);
             }
         }
@@ -230,7 +234,8 @@ namespace CapsisWebAPI.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e.Message);
+                if (_logger != null)
+                    _logger.LogError(e.Message);
                 return StatusCode(500);
             }
         }
