@@ -35,10 +35,39 @@ namespace CapsisWebAPI.Controllers
             _logger = logger;            
         }
 
-        protected void LogRequest(HttpRequest req)
+        protected string GetRequestIP(HttpRequest req)
+        {
+            string ip = "unknown IP";
+
+            if (req.Headers.ContainsKey("X-Forwarded-For"))
+            {
+                ip = req.Headers["X-Forwarded-For"].ToString();
+                if (ip.Contains(':'))
+                    ip = ip.Split(':')[0];
+            }
+            else
+            {
+                if (req.HttpContext.Connection.RemoteIpAddress != null)
+                    ip = req.HttpContext.Connection.RemoteIpAddress.ToString();
+            }
+
+            return ip;
+        }
+
+        /// <summary>
+        /// Logs a request to the log
+        /// </summary>
+        /// <param name="req">The request object to be logged</param>
+        /// <param name="errorMessage">optional errorMessage.  If no error message is provided (null), then the request is considered successful</param>
+        protected void LogRequest(HttpRequest req, string? errorMessage = null)
         {
             if (_logger != null)
-                _logger.LogInformation("Received request " + req.Method + " " + req.Path + req.QueryString + " from " + req.Headers["Referer"]);
+            {
+                if (errorMessage == null)
+                    _logger.LogInformation("Success processing request " + req.Method + " " + req.Path + req.QueryString + " from " + GetRequestIP(req));
+                else
+                    _logger.LogInformation("Error processing request " + req.Method + " " + req.Path + req.QueryString + " from " + GetRequestIP(req) + ".  Message : " + errorMessage);
+            }
         }
 
         protected void processHandlerDict()
@@ -61,29 +90,35 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("VariantList")]
         public IActionResult VariantList()
-        {
+        {            
+            var result = staticQueryCache.variantDataMap.Keys.ToList();
+
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
 
-            return Ok(staticQueryCache.variantDataMap.Keys.ToList());   
+            return Ok(result);   
         }
         
         [HttpGet]
         [Route("VariantSpecies")]
         public IActionResult VariantSpecies([Required][FromQuery] String variant = "Artemis", [FromQuery] String type = "All")
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-
+        {            
             try
             {                
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
-                return Ok(staticQueryCache.variantDataMap[variant].speciesMap[enumType]);                
+
+                var result = staticQueryCache.variantDataMap[variant].speciesMap[enumType];
+
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request);
+
+                return Ok(result);                
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                    _logger.LogError(ex.Message);
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, ex.Message);
+
                 return BadRequest(ex.Message);
             }
         }
@@ -92,27 +127,32 @@ namespace CapsisWebAPI.Controllers
         [Route("OutputRequestTypes")]
         public IActionResult OutputRequestTypes()
         {
+            var result = staticQueryCache.requestTypes;
+
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
 
-            return Ok(staticQueryCache.requestTypes);
+            return Ok(result);
         }
         
         [HttpGet]
         [Route("VariantFields")]
         public IActionResult VariantFields([Required][FromQuery] String variant = "Artemis")
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-
+        {            
             try
             {
-                return Ok(staticQueryCache.variantDataMap[variant].fields);
+                var result = staticQueryCache.variantDataMap[variant].fields;
+
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request);
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                    _logger.LogError(ex.Message);
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, ex.Message);
+
                 return BadRequest(ex.Message);
             }
         }
@@ -120,10 +160,7 @@ namespace CapsisWebAPI.Controllers
         [HttpPost]
         [Route("Simulate")]
         public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Artemis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-            
+        {                        
             try
             {
                 lock (handlerDict)
@@ -131,7 +168,12 @@ namespace CapsisWebAPI.Controllers
                     processHandlerDict();
 
                     if (handlerDict.Count >= MaxProcessNumber)
+                    {
+                        if (HttpContext != null)
+                            LogRequest(HttpContext.Request, "Too Many Requests");
+
                         return StatusCode(429);     // Too Many Requests
+                    }
 
                     List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
                     List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
@@ -148,13 +190,17 @@ namespace CapsisWebAPI.Controllers
                     handlerDict[newTaskGuid.ToString()] = handler;
                     resultDict[newTaskGuid.ToString()] = handler.GetSimulationStatus();
 
+                    if (HttpContext != null)
+                        LogRequest(HttpContext.Request);
+
                     return Ok(newTaskGuid.ToString());
                 }
             }
             catch (Exception e)
             {
-                if (_logger != null)
-                    _logger.LogError(e.Message);
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, e.Message);
+
                 return BadRequest(e.Message);
             }
         }
@@ -162,10 +208,7 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("TaskStatus")]
         public IActionResult SimulationStatus([Required][FromQuery] string taskID)
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-
+        {            
             try
             {
                 lock (handlerDict)
@@ -178,15 +221,20 @@ namespace CapsisWebAPI.Controllers
                         // remove the task from the table once the results are being successfully returned                                                            
                         resultDict.Remove(taskID);
                     }
-                    
+
+                    if (HttpContext != null)
+                        LogRequest(HttpContext.Request);
+
                     return Ok(status);
                 }
             }
             catch (Exception e)
             {
                 string message = "Unrecognized taskID";
-                if (_logger != null)
-                    _logger.LogError(message);
+
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, message);
+
                 return BadRequest(message);
             }
         }
@@ -194,10 +242,7 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("Cancel")]
         public IActionResult Cancel([Required][FromQuery] string taskID)
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-
+        {            
             try
             {
                 lock (handlerDict)
@@ -223,20 +268,28 @@ namespace CapsisWebAPI.Controllers
                     }
 
                     if (found)
+                    {
+                        if (HttpContext != null)
+                            LogRequest(HttpContext.Request);
+
                         return Ok();
+                    }
                     else
                     {
                         string message = "Unrecognized taskID";
-                        if (_logger != null)
-                            _logger.LogError(message);
+
+                        if (HttpContext != null)
+                            LogRequest(HttpContext.Request, message);
+
                         return BadRequest(message);
                     }
                 }
             }
             catch (Exception e)
             {
-                if (_logger != null)
-                    _logger.LogError(e.Message);
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, e.Message);
+
                 return StatusCode(500);
             }
         }
@@ -244,12 +297,13 @@ namespace CapsisWebAPI.Controllers
         [HttpGet]
         [Route("")]
         public IActionResult Index()
-        {
+        {            
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            result["version"] = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
 
-            Dictionary<string, object> result = new Dictionary<string, object>();
-            result["version"] = Assembly.GetExecutingAssembly().GetName().Version.ToString();
             return Ok(result);
         }
     }
