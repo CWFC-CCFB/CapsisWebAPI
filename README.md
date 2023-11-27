@@ -34,6 +34,7 @@ if cloning a specific branch (ex: develop) use :
 git clone -b develop https://github.com/CWFC-CCFB/CapsisWebAPI.git subfolder
 ```
 note : If subfolder is not specified, git will automatically create a subfolder named CapsisWebAPI into the desired location
+
 4. to ensure the build system is working properly, cd into the CapsisWebAPI subfolder of the project folder and launch command : 
 ```
 dotnet publish -c Release -r win-x64
