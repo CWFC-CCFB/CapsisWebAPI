@@ -16,8 +16,7 @@ https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-
  ant clean compile
 ~~~
 
-5. If everything ran ok, you should see the capsis files installed in ./export
-6. Set a new environment variable CAPSISWEBAPI_CAPSIS_PATH to the location where Capsis has been checked out (not the export subfolder, but the main folder)
+5. Set a new environment variable CAPSISWEBAPI_CAPSIS_PATH to the location where Capsis has been checked out (not the export subfolder, but the main folder)
 
 ## Setup of the build system
 1. Install Microsoft Build Tools 2022 from this page : https://visualstudio.microsoft.com/downloads/?q=build+tools
