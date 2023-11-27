@@ -11,8 +11,11 @@ https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-
 1. Install Apache Ant on the target host from this page : https://ant.apache.org/bindownload.cgi (1.10.13 recommended) and make sure your system PATH environment variable points to the ant folder /bin
 2. Checkout capsis in any folder you want (and note it)
 3. Edit the ant.bat file inside the capsis checkout folder and make sure the path correctly points to your Java 1.8 JDK installation (JRE won't work)
-4. Test the ant installation and script by launching command : 
-	ant installer-export
+4. Test the ant installation and script by launching command :
+~~~
+ ant clean compile
+~~~
+
 5. If everything ran ok, you should see the capsis files installed in ./export
 6. Set a new environment variable CAPSISWEBAPI_CAPSIS_PATH to the location where Capsis has been checked out (not the export subfolder, but the main folder)
 
