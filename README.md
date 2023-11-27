@@ -41,6 +41,7 @@ dotnet publish -c Release -r win-x64
 ```
 
 This will result in the app files being deployed in the CapsisWebAPI\bin\Release\net5.0\win-x64\publish folder
+
 5. Test the app launch by executing the publish command again as in step 4
 ```
 dotnet publish -c Release -r win-x64 
