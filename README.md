@@ -29,9 +29,9 @@ https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-
 2. Install GIT on the target host using this page : https://git-scm.com/download/win
 3. Open a commandline (CMD) window and clone the GIT repository to the desired location on the target host using command
 if cloning the default production branch use :
-```
+~~~
 git clone https://github.com/CWFC-CCFB/CapsisWebAPI.git subfolder
-```
+~~~
 if cloning a specific branch (ex: develop) use :
 ```
 git clone -b develop https://github.com/CWFC-CCFB/CapsisWebAPI.git subfolder
