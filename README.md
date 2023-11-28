@@ -42,7 +42,7 @@ note : If subfolder is not specified, git will automatically create a subfolder 
 dotnet publish -c Release -r win-x64
 ```
 
-This will result in the app files being deployed in the CapsisWebAPI\bin\Release\net5.0\win-x64\publish folder
+This will result in the app files being deployed in the CapsisWebAPI\bin\Release\net6.0\win-x64\publish folder
 
 5. Test the app launch by executing the publish command again as in step 4
 ```
@@ -51,7 +51,7 @@ dotnet publish -c Release -r win-x64
 
 6. cd into the publish subfolder (as specified in step 4) then launch :
 ```
-	WebAPI.exe
+	CAPSISWebAPI.exe
 ```
 
 This should start the service (which will probably crash because it needs its capsis dependency to launch properly).  
@@ -88,7 +88,7 @@ Create and setup the website folder
 3. Enter CapsisWebAPI_A in the Site name field
 4. Click "..." and select the CapsisWebAPI_A folder location created above as "Physical path"
 5. Leave the "Host name" field empty and click OK
-6. Right-click on the newly created CapsisWebAPI_A website and select "Add Application"
+6. Right-click on the newly created CapsisWebAPI_A website and select "Add Application" (this step can be omitted as the application can be created by default)
 7. enter "CapsisWebAPI_A" in the Alias field and click on "..." to select the same CapsisWebAPI_A folder created above again
 8. Click OK
 
