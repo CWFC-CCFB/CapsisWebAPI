@@ -41,16 +41,16 @@ namespace Capsis.Handler
 
             public SimulationStatus(string status, string? errorMessage, double progress, string? result)
             {
-                this.status = status;
-                this.errorMessage = errorMessage;
-                this.progress = progress;
-                this.result = result == null ? null : JsonConvert.DeserializeObject<ScriptResult>(result);
+                Status = status;
+                ErrorMessage = errorMessage;
+                Progress = progress;
+                Result = result == null ? null : JsonConvert.DeserializeObject<ScriptResult>(result);
             }
 
-            public string status { get; set; }
-            public string? errorMessage { get; set; }
-            public double progress { get; set; }
-            public ScriptResult? result { get; set; }            
+            public string Status { get; private set; }
+            public string? ErrorMessage { get; private set; }
+            public double Progress { get; private set; }
+            public ScriptResult? Result { get; private set; }            
         }
 
         public enum Variant { Artemis }
@@ -70,12 +70,14 @@ namespace Capsis.Handler
         private readonly CapsisProcessHandlerSettings _settings;
         private bool disableJavaWatchdog;
 
-        double progress;     // value between [0,1] only valid when in STARTED mode
+        public double Progress { get; private set; }     // value between [0,1] only valid when in STARTED mode
 
-        string? result;      // a string containing the result from the last COMPLETED message
+        private string? Result { get; set; }      // a string containing the result from the last COMPLETED message
 
-        State state;
-        string? errorMessage;   
+        public State Status { get; private set; }
+
+
+        public string? ErrorMessage { get; private set; }  
         internal Thread? thread;  
         internal Process? process;
         bool ownsProcess;
@@ -99,40 +101,29 @@ namespace Capsis.Handler
         /// <param name="disableJavaWatchdog"> a boolean to enable or disable JavaWatchDog (by default to false) </param> 
         /// <param name="bindToPort"> an optional port number (typically in debug mode) </param> 
         public CapsisProcessHandler(CapsisProcessHandlerSettings settings,
-//            String capsisPath, 
-//            String dataDirectory, 
             ILogger logger,  
-//            int timeoutMilliSec,
             bool disableJavaWatchdog = false, 
             int bindToPort = 0)
         {
-            //            this.capsisPath = capsisPath;
-            //            this.dataDirectory = dataDirectory;
             if (settings == null || logger == null)
                 throw new ArgumentNullException("The settings and logger parameters cannot be non null!");
             this._settings = settings;
             this._logger = logger;
-//            if (timeoutMilliSec < 0)
-//                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
-//            this._timeoutMilliSec = timeoutMilliSec;
-            state = State.INIT;            
+            Status = State.INIT;            
             thread = null;
             process = null;
             ownsProcess = false;
-            result = null;
+            Result = null;
             writerProcessInput = null;
             this.disableJavaWatchdog = disableJavaWatchdog;
             this.bindToPort = bindToPort;
             csvFilename = null;
         }        
 
-        public State GetState() { return state; }
-        public double GetProgress() { return progress; }
-        public string? GetErrorMessage() { return errorMessage; }    
         public string? GetResult() {
             lock (this)
             {
-                return result;
+                return Result;
             }
         }
 
@@ -140,23 +131,23 @@ namespace Capsis.Handler
 
         public void Start()
         {
-            if (state != State.INIT)
-                throw new InvalidOperationException("CapsisProcess cannot start async thread in state " + Enum.GetName<State>(state));
+            if (Status != State.INIT)
+                throw new InvalidOperationException("CapsisProcess cannot start async thread in state " + Enum.GetName<State>(Status));
 
-            state = State.OPERATION_PENDING;    
+            Status = State.OPERATION_PENDING;    
 
             thread = new Thread(new ThreadStart(LaunchProcess));
 
             thread.Start();
 
-            while (thread.IsAlive && state == State.OPERATION_PENDING) 
+            while (thread.IsAlive && Status == State.OPERATION_PENDING) 
             {
                 Thread.Sleep(1);
             }
 
-            if (!thread.IsAlive || state != State.READY)
+            if (!thread.IsAlive || Status != State.READY)
             {
-                throw new InvalidOperationException("CapsisProcess could not start async thread. Message : " + errorMessage);
+                throw new InvalidOperationException("CapsisProcess could not start async thread. Message : " + ErrorMessage);
             }
         }
 
@@ -206,7 +197,7 @@ namespace Capsis.Handler
         void LaunchProcess()
         {
             bool stopListening = false;
-            progress = 0.0;
+            Progress = 0.0;
 
             StreamReader readerProcessOutput;
             TcpClient? client = null;
@@ -232,15 +223,15 @@ namespace Capsis.Handler
                     process = Process.Start(processStartInfo);
                     if (process == null)
                     {
-                        errorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
-                        state = State.ERROR;
+                        ErrorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
+                        Status = State.ERROR;
                         return;
                     }
                 }
                 catch (Exception e)
                 {
-                    errorMessage = "Exception caught while starting the process : " + e.Message;
-                    state = State.ERROR;
+                    ErrorMessage = "Exception caught while starting the process : " + e.Message;
+                    Status = State.ERROR;
                     return;
                 }
 
@@ -260,8 +251,8 @@ namespace Capsis.Handler
                 }
                 catch (Exception e)
                 {
-                    errorMessage = "Unable to bind to forced port " + bindToPort;
-                    state = State.ERROR;
+                    ErrorMessage = "Unable to bind to forced port " + bindToPort;
+                    Status = State.ERROR;
                     return;
                 }
             }            
@@ -309,11 +300,11 @@ namespace Capsis.Handler
                                             }
                                             catch (Exception ex)
                                             {
-                                                errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
-                                                state = State.ERROR;
+                                                ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                                                Status = State.ERROR;
                                                 return;
                                             }
-                                            state = State.ERROR;
+                                            Status = State.ERROR;
                                             stopListening = true;
                                         }
                                     }
@@ -324,7 +315,7 @@ namespace Capsis.Handler
                                     {                                        
                                         if (msg.payload != null)
                                         {
-                                            progress = Double.Parse(msg.payload);   
+                                            Progress = Double.Parse(msg.payload);   
                                         }
                                         
                                         ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
@@ -335,7 +326,7 @@ namespace Capsis.Handler
                                 {
                                     lock (this)
                                     {
-                                        state = State.READY;
+                                        Status = State.READY;
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))
@@ -346,23 +337,23 @@ namespace Capsis.Handler
                                         stopListening = true;
                                         if (ownsProcess)
                                             process.WaitForExit();
-                                        state = State.READY;
+                                        Status = State.READY;
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_ERROR)))
                                 {
                                     lock (this)
                                     {                                                                                
-                                        state = State.ERROR;
-                                        errorMessage = msg.payload;
+                                        Status = State.ERROR;
+                                        ErrorMessage = msg.payload;
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_COMPLETED)))
                                 {
                                     lock (this)
                                     {                                        
-                                        state = State.READY;
-                                        result = msg.payload;
+                                        Status = State.READY;
+                                        Result = msg.payload;
                                     }
                                 }
                             }
@@ -384,13 +375,13 @@ namespace Capsis.Handler
                         }
                         catch (Exception ex)
                         {
-                            errorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
-                            state = State.ERROR;
+                            ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                            Status = State.ERROR;
                             return;
                         }
                         processStdOut = null;
                         readerProcessOutput = null;
-                        state = State.ERROR;
+                        Status = State.ERROR;
                         stopListening = true;
                     }
                 }
@@ -398,8 +389,8 @@ namespace Capsis.Handler
 
             if (ownsProcess && process != null && process.HasExited)  // at this point, the process should be running
             {
-                errorMessage = "Process terminated unexpectedly in directory " + _settings.CapsisDirectory;
-                state = State.ERROR;
+                ErrorMessage = "Process terminated unexpectedly in directory " + _settings.CapsisDirectory;
+                Status = State.ERROR;
                 return;
             }
         }
@@ -411,12 +402,12 @@ namespace Capsis.Handler
 
             lock (this)
             {
-                state = State.OPERATION_PENDING;
+                Status = State.OPERATION_PENDING;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageStop();
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING || (process != null && !process.HasExited))
+            while (Status == State.OPERATION_PENDING || (process != null && !process.HasExited))
                 Thread.Sleep(1);
         }
 
@@ -435,13 +426,13 @@ namespace Capsis.Handler
                 csvFilename = _settings.DataDirectory + Path.AltDirectorySeparatorChar + guid.ToString() + ".csv";
                 File.WriteAllText(csvFilename, data);
 
-                state = State.OPERATION_PENDING;
-                result = null;
+                Status = State.OPERATION_PENDING;
+                Result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING)
+            while (Status == State.OPERATION_PENDING)
                 Thread.Sleep(1);
 
             return guid;
@@ -459,18 +450,18 @@ namespace Capsis.Handler
 
             lock (this)
             {
-                state = State.OPERATION_PENDING;
-                result = null;
+                Status = State.OPERATION_PENDING;
+                Result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetSpeciesOfType(type);
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING)
+            while (Status == State.OPERATION_PENDING)
                 Thread.Sleep(1);
 
             lock (this)
             {
-                return JsonConvert.DeserializeObject<List<string>>(result);
+                return JsonConvert.DeserializeObject<List<string>>(Result);
             }
         }
 
@@ -485,18 +476,18 @@ namespace Capsis.Handler
 
             lock (this)
             {
-                state = State.OPERATION_PENDING;
-                result = null;
+                Status = State.OPERATION_PENDING;
+                Result = null;
                 ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetFieldList();
                 SendMessage(msg);
             }
 
-            while (state == State.OPERATION_PENDING)
+            while (Status == State.OPERATION_PENDING)
                 Thread.Sleep(1);
 
             lock (this)
             {
-                return JsonConvert.DeserializeObject<List<ImportFieldElementIDCard>>(result);
+                return JsonConvert.DeserializeObject<List<ImportFieldElementIDCard>>(Result);
             }
         }
 
@@ -504,30 +495,30 @@ namespace Capsis.Handler
         {
             lock(this)
             {
-                return state == State.READY;
+                return Status == State.READY;
             }
         }
 
-        public bool isResultAvailable() { return result != null; }
+        public bool isResultAvailable() { return Result != null; }
 
         public SimulationStatus GetSimulationStatus()
         {
             lock (this)
             {
-                if (state == State.READY)
+                if (Status == State.READY)
                 {
-                    if (result != null)
-                        return new SimulationStatus(SimulationStatus.COMPLETED, null, progress, result);
-                    else
-                        return new SimulationStatus(SimulationStatus.IN_PROGRESS, null, progress, null);
-                }                
-                else if (state == State.STOPPED)
+                    return new SimulationStatus(Result != null ? SimulationStatus.COMPLETED : SimulationStatus.IN_PROGRESS,
+                        null,
+                        Progress,
+                        Result);
+                }
+                else if (Status == State.STOPPED)
                 {
                     return new SimulationStatus(SimulationStatus.STOPPED, null, 0.0, null);
                 }
-                else if (state == State.ERROR)
+                else if (Status == State.ERROR)
                 {
-                    return new SimulationStatus(SimulationStatus.ERROR, errorMessage, 0.0, null);
+                    return new SimulationStatus(SimulationStatus.ERROR, ErrorMessage, 0.0, null);
                 }
                 else
                 {

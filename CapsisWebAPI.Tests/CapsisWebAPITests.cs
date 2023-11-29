@@ -62,7 +62,7 @@ namespace CapsisWebAPI
                 Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
                 Assert.IsNotNull(oresult.Value);
                 CapsisProcessHandler.SimulationStatus status = (CapsisProcessHandler.SimulationStatus)oresult.Value;
-                gotResults = status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED);
+                gotResults = status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED);
                 if (!gotResults)
                     Thread.Sleep(100);
             }

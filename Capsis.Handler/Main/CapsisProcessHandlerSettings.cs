@@ -51,8 +51,10 @@ namespace Capsis.Handler.Main
             DataDirectory = Directory.Exists(potentialDataPath) ? potentialDataPath : cb["DataDirectory"];
             if (!Directory.Exists(DataDirectory))
                 throw new ArgumentException("The DATA folder: " + DataDirectory + " does not exist!");
-
-            TimeoutMilliseconds = int.Parse(cb["TimeoutMillisec"]);
+            int timeoutMillisec = int.Parse(cb["TimeoutMillisec"]);
+            if (timeoutMillisec < 0)
+                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
+            TimeoutMilliseconds = timeoutMillisec;
         }
     }
 }

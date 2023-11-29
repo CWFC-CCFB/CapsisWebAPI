@@ -46,7 +46,7 @@ namespace Capsis.Handler
                 handler.Start();
                 Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is alive
                 Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is responding
-                Assert.AreEqual(CapsisProcessHandler.State.READY, handler.GetState());  // make sure the handler is in READY state                    
+                Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // make sure the handler is in READY state                    
                 handler.Stop();
             }
             catch (Exception ex)
@@ -99,7 +99,7 @@ namespace Capsis.Handler
             Assert.IsFalse(variantList.Count == 0);     // make sure the variant list isn't empty
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
-            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.GetState());  // ensure handler is still in READY state (after a synced call)
+            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after a synced call)
             handler.Stop();
             Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
             Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
@@ -117,11 +117,11 @@ namespace Capsis.Handler
             handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
-            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.GetState());  // ensure handler is still in READY state (after an async call)
-            double progress = handler.GetProgress();
+            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
+            double progress = handler.Progress;
             while (!handler.isResultAvailable())
             {
-                double newProgress = handler.GetProgress();
+                double newProgress = handler.Progress;
                 Assert.IsTrue(newProgress >= progress, "Progress should always increase only");
                 progress = newProgress;
                 Thread.Sleep(100);
@@ -146,11 +146,11 @@ namespace Capsis.Handler
             handler.Simulate("Artemis", data, null, 2000, true, 500, "Stand", "NoChange", 2080, fieldMatches);
             //Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             //Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
-            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.GetState());  // ensure handler is still in READY state (after an async call)
-            double progress = handler.GetProgress();
+            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
+            double progress = handler.Progress;
             while (!handler.isResultAvailable())
             {
-                double newProgress = handler.GetProgress();
+                double newProgress = handler.Progress;
                 Assert.IsTrue(newProgress >= progress, "Progress should always increase only");
                 progress = newProgress;
                 Thread.Sleep(100);
@@ -175,7 +175,7 @@ namespace Capsis.Handler
             handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);               
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
-            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.GetState());  // ensure handler is still in READY state (after an async call)
+            Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
             handler.Stop();
             Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
             Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
@@ -220,9 +220,9 @@ namespace Capsis.Handler
 
             CapsisProcessHandler.SimulationStatus status = handler.GetSimulationStatus();
 
-            Assert.AreEqual(2, status.result.outputTypes.Count, "Default output request should lead to two outputs");
-            Assert.IsTrue(status.result.outputTypes.Contains("AliveVolume_Broadleaved"), "Default output request should lead to AliveVolume_Broadleaved being output");
-            Assert.IsTrue(status.result.outputTypes.Contains("AliveVolume_Coniferous"), "Default output request should lead to AliveVolume_Coniferous being output");
+            Assert.AreEqual(2, status.Result.outputTypes.Count, "Default output request should lead to two outputs");
+            Assert.IsTrue(status.Result.outputTypes.Contains("AliveVolume_Broadleaved"), "Default output request should lead to AliveVolume_Broadleaved being output");
+            Assert.IsTrue(status.Result.outputTypes.Contains("AliveVolume_Coniferous"), "Default output request should lead to AliveVolume_Coniferous being output");
 
             handler.Stop();
         }

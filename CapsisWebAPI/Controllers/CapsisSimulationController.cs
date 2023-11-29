@@ -103,7 +103,7 @@ namespace CapsisWebAPI.Controllers
                 {
                     CapsisProcessHandler.SimulationStatus status = entry.Value.GetSimulationStatus();
                     resultDict[entry.Key] = status;
-                    if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
                     {   // remove the task from the table once the results are being successfully returned                                                            
                         entry.Value.Stop();
                         handlerDict.Remove(entry.Key);                        
@@ -241,7 +241,7 @@ namespace CapsisWebAPI.Controllers
                     processHandlerDict();
                     
                     CapsisProcessHandler.SimulationStatus status = resultDict[taskID];
-                    if (status.status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
                     {
                         // remove the task from the table once the results are being successfully returned                                                            
                         resultDict.Remove(taskID);
