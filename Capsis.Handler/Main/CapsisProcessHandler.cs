@@ -90,6 +90,7 @@ namespace Capsis.Handler
         StreamReader? processStdOut = null;
 
         private readonly ILogger _logger;
+        private bool stopRequested;
 
         /// <summary>
         /// Constructor.
@@ -118,6 +119,7 @@ namespace Capsis.Handler
             this.disableJavaWatchdog = disableJavaWatchdog;
             this.bindToPort = bindToPort;
             csvFilename = null;
+            stopRequested = false;
         }        
 
         public string? GetResult() {
@@ -387,7 +389,7 @@ namespace Capsis.Handler
                 }
             }
 
-            if (ownsProcess && process != null && process.HasExited)  // at this point, the process should be running
+            if (ownsProcess && process != null && process.HasExited && !stopRequested)  // at this point, the process should be running
             {
                 ErrorMessage = "Process terminated unexpectedly in directory " + _settings.CapsisDirectory;
                 Status = State.ERROR;
@@ -397,8 +399,9 @@ namespace Capsis.Handler
         
         public void Stop()
         {
+            stopRequested = true;
             if (ownsProcess && process == null)
-                throw new Exception("Cannot send stop message on null process");
+                throw new InvalidOperationException("Cannot send stop message on null process");
 
             lock (this)
             {

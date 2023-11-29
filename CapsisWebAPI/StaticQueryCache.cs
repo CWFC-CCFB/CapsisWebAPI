@@ -43,6 +43,8 @@ namespace CapsisWebAPI
         /// <returns>The StaticQueryCache created</returns>
         public static StaticQueryCache FillStaticCache(AppSettings appSettings, ILogger logger)
         {
+            logger.LogInformation("Initializing static query cache...");
+
             StaticQueryCache staticQueryCache = new();
 
             CapsisProcessHandler handler = new(appSettings, logger);
@@ -73,6 +75,8 @@ namespace CapsisWebAPI
                 logger.LogError("An error occurred while performing the static query: " + handler.ErrorMessage);
                 throw new Exception(handler.ErrorMessage);
             }
+
+            logger.LogInformation("Static query cache successfully initalized: " + staticQueryCache.ToString());
 
             return staticQueryCache;
         }
