@@ -43,6 +43,7 @@ namespace CapsisWebAPI
         /// <returns>The StaticQueryCache created</returns>
         public static StaticQueryCache FillStaticCache(AppSettings appSettings, ILogger logger)
         {
+            logger.LogError("This is a test!!!!");
             StaticQueryCache staticQueryCache = new();
 
             CapsisProcessHandler handler = new(appSettings, logger);
