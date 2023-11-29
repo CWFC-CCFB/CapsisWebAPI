@@ -112,7 +112,7 @@ namespace Capsis.Handler
             handler.Start();
 
             // read the CSV data
-            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
@@ -141,7 +141,7 @@ namespace Capsis.Handler
             handler.Start();
 
             // read the CSV data
-            string data = File.ReadAllText("data/STR_RE2_120.csv");
+            string data = File.ReadAllText("dataTest/STR_RE2_120.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate("Artemis", data, null, 2000, true, 500, "Stand", "NoChange", 2080, fieldMatches);
             //Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
@@ -170,7 +170,7 @@ namespace Capsis.Handler
             handler.Start();
 
             // read the CSV data
-            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);               
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
@@ -189,7 +189,7 @@ namespace Capsis.Handler
             int processID = handler.process.Id;
 
             // read the CSV data
-            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);
 
@@ -210,7 +210,7 @@ namespace Capsis.Handler
             handler.Start();
 
             // read the CSV data
-            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
             while (!handler.isResultAvailable())

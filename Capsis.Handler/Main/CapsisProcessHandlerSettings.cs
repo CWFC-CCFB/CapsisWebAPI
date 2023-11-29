@@ -30,11 +30,28 @@ namespace Capsis.Handler.Main
         public string DataDirectory { get; private set; }
         public int TimeoutMilliseconds { get; private set; }
 
+        /// <summary>
+        /// Provide the settings for the CapsisProcessHandler class.
+        /// <para> The settings contain the CAPSIS directory path, the DATA
+        /// directory path and the timeout parameter (ms). If the folders ./capsis and
+        /// ./data exist, they are automatically selected regardless of what is 
+        /// specified in the json file.</para>
+        /// </summary>
+        /// <param name="jsonFilename"></param>
+        /// <exception cref="ArgumentException"></exception>
         public CapsisProcessHandlerSettings(string jsonFilename)
         {
             IConfigurationRoot cb = new ConfigurationBuilder().AddJsonFile(jsonFilename).Build();
-            CapsisDirectory = cb["CapsisPath"];
-            DataDirectory = cb["DataDirectory"];
+            string rootPath = Environment.CurrentDirectory;
+            string potentialCapsisPath = Path.Combine(rootPath, "capsis");
+            CapsisDirectory = Directory.Exists(potentialCapsisPath) ? potentialCapsisPath : cb["CapsisPath"];
+            if (!Directory.Exists(CapsisDirectory))
+                throw new ArgumentException("The CAPSIS folder: " + CapsisDirectory + " does not exist!");
+            string potentialDataPath = Path.Combine(rootPath, "data");
+            DataDirectory = Directory.Exists(potentialDataPath) ? potentialDataPath : cb["DataDirectory"];
+            if (!Directory.Exists(DataDirectory))
+                throw new ArgumentException("The DATA folder: " + DataDirectory + " does not exist!");
+
             TimeoutMilliseconds = int.Parse(cb["TimeoutMillisec"]);
         }
     }
