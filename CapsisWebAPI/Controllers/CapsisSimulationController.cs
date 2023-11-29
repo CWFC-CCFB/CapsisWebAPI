@@ -1,3 +1,24 @@
+/*
+ * This file is part of the CapsisWebAPI solution
+ *
+ * Author Jean-Francois Lavoie - Canadian Forest Service
+ * Copyright (C) 2023 His Majesty the King in Right of Canada
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU Lesser General Public
+ * License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 using Capsis.Handler;
 using Capsis.Handler.Requests;
 using Microsoft.AspNetCore.Mvc;
@@ -15,10 +36,10 @@ namespace CapsisWebAPI.Controllers
     {               
         private readonly ILogger _logger;
         
-        private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
-        private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
+//        private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
+//        private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
         private static readonly int MaxProcessNumber = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["MaxProcessNumber"]);
-        private static readonly int TimeoutMillisec = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]); 
+//        private static readonly int TimeoutMillisec = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]); 
 
 
         static Dictionary<string, CapsisProcessHandler> handlerDict = new Dictionary<string, CapsisProcessHandler>();
@@ -182,7 +203,7 @@ namespace CapsisWebAPI.Controllers
                     List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
                     List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
 
-                    CapsisProcessHandler handler = new(CapsisPath, DataDirectory, _logger, TimeoutMillisec);
+                    CapsisProcessHandler handler = new(AppSettings.GetInstance(), _logger);
 
                     handler.Start();
 

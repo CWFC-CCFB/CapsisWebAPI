@@ -1,4 +1,25 @@
-﻿using Capsis.Handler.Main;
+﻿/*
+ * This file is part of the CapsisWebAPI solution
+ *
+ * Author Jean-Francois Lavoie - Canadian Forest Service
+ * Copyright (C) 2023 His Majesty the King in Right of Canada
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU Lesser General Public
+ * License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+using Capsis.Handler.Main;
 using Capsis.Handler.Requests;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -43,9 +64,10 @@ namespace Capsis.Handler
             ERROR            
         }
 
-        private readonly String capsisPath;
-        private readonly String dataDirectory;
-        private readonly int _timeoutMilliSec;
+        //        private readonly String capsisPath;
+        //        private readonly String dataDirectory;
+        //        private readonly int _timeoutMilliSec;
+        private readonly CapsisProcessHandlerSettings _settings;
         private bool disableJavaWatchdog;
 
         double progress;     // value between [0,1] only valid when in STARTED mode
@@ -76,19 +98,23 @@ namespace Capsis.Handler
         /// <param name "timeoutMilliSec"> the number of millisecond before calling the JVM unresponsive </param>
         /// <param name="disableJavaWatchdog"> a boolean to enable or disable JavaWatchDog (by default to false) </param> 
         /// <param name="bindToPort"> an optional port number (typically in debug mode) </param> 
-        public CapsisProcessHandler(String capsisPath, 
-            String dataDirectory, 
+        public CapsisProcessHandler(CapsisProcessHandlerSettings settings,
+//            String capsisPath, 
+//            String dataDirectory, 
             ILogger logger,  
-            int timeoutMilliSec,
+//            int timeoutMilliSec,
             bool disableJavaWatchdog = false, 
             int bindToPort = 0)
         {
-            this.capsisPath = capsisPath;
-            this.dataDirectory = dataDirectory;
+            //            this.capsisPath = capsisPath;
+            //            this.dataDirectory = dataDirectory;
+            if (settings == null || logger == null)
+                throw new ArgumentNullException("The settings and logger parameters cannot be non null!");
+            this._settings = settings;
             this._logger = logger;
-            if (timeoutMilliSec < 0)
-                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
-            this._timeoutMilliSec = timeoutMilliSec;
+//            if (timeoutMilliSec < 0)
+//                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
+//            this._timeoutMilliSec = timeoutMilliSec;
             state = State.INIT;            
             thread = null;
             process = null;
@@ -188,8 +214,8 @@ namespace Capsis.Handler
             if (bindToPort == 0)    // if a port is specified, then do not spawn a new process, but connect to it
             {
                 String classPathOption = "-cp ";
-                classPathOption += AddQuoteToStringIfNeeded(capsisPath + Path.AltDirectorySeparatorChar + "class") + ";";
-                classPathOption += AddQuoteToStringIfNeeded(capsisPath + Path.AltDirectorySeparatorChar + "ext/*");
+                classPathOption += AddQuoteToStringIfNeeded(_settings.CapsisDirectory + Path.AltDirectorySeparatorChar + "class") + ";";
+                classPathOption += AddQuoteToStringIfNeeded(_settings.CapsisDirectory + Path.AltDirectorySeparatorChar + "ext/*");
 
                 ProcessStartInfo processStartInfo = new();
                 processStartInfo.UseShellExecute = false;
@@ -244,7 +270,7 @@ namespace Capsis.Handler
             {                
                 Task<string?> readLineTask = readerProcessOutput.ReadLineAsync();
 
-                if (readLineTask.Wait(_timeoutMilliSec))   
+                if (readLineTask.Wait(_settings.TimeoutMilliseconds))   
                 {
                     string? line = readLineTask.Result;
                     if (line != null)
@@ -372,7 +398,7 @@ namespace Capsis.Handler
 
             if (ownsProcess && process != null && process.HasExited)  // at this point, the process should be running
             {
-                errorMessage = "Process terminated unexpectedly in directory " + capsisPath;
+                errorMessage = "Process terminated unexpectedly in directory " + _settings.CapsisDirectory;
                 state = State.ERROR;
                 return;
             }
@@ -406,7 +432,7 @@ namespace Capsis.Handler
             lock (this)
             {
                 // save csv file to data directory
-                csvFilename = dataDirectory + Path.AltDirectorySeparatorChar + guid.ToString() + ".csv";
+                csvFilename = _settings.DataDirectory + Path.AltDirectorySeparatorChar + guid.ToString() + ".csv";
                 File.WriteAllText(csvFilename, data);
 
                 state = State.OPERATION_PENDING;

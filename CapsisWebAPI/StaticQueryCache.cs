@@ -41,11 +41,11 @@ namespace CapsisWebAPI
         /// <param name="logger"> the application logger </param>
         /// <param name="TimeoutMillisec"> the number of milliseconds before calling a timeout </param>
         /// <returns>The StaticQueryCache created</returns>
-        public static StaticQueryCache FillStaticCache(String CapsisPath, String DataDirectory, ILogger logger, int TimeoutMillisec)
+        public static StaticQueryCache FillStaticCache(AppSettings appSettings, ILogger logger)
         {
             StaticQueryCache staticQueryCache = new();
 
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory, logger, TimeoutMillisec);
+            CapsisProcessHandler handler = new(appSettings, logger);
             handler.Start();
 
             List<String> variantList = handler.VariantList();

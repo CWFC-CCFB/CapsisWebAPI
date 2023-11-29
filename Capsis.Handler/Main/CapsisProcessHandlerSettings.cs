@@ -1,8 +1,8 @@
 ﻿/*
  * This file is part of the CapsisWebAPI solution
  *
- * Author Jean-Francois Lavoie - Canadian Forest Service
- * Copyright (C) 2023 His Majesty the King in Right of Canada
+ * Author Mathieu Fortin - Canadian Forest Service
+ * Copyright (C) 2023 His Majesty the King in right of Canada
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,23 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
-namespace Capsis.Handler
+namespace Capsis.Handler.Main
 {
-    public class Observation
+    public class CapsisProcessHandlerSettings
     {
-        public List<Object> values { get; set; }
+
+        public string CapsisDirectory { get; private set; }
+        public string DataDirectory { get; private set; }
+        public int TimeoutMilliseconds { get; private set; }
+
+        public CapsisProcessHandlerSettings(string jsonFilename)
+        {
+            IConfigurationRoot cb = new ConfigurationBuilder().AddJsonFile(jsonFilename).Build();
+            CapsisDirectory = cb["CapsisPath"];
+            DataDirectory = cb["DataDirectory"];
+            TimeoutMilliseconds = int.Parse(cb["TimeoutMillisec"]);
+        }
     }
 }

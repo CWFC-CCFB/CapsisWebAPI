@@ -19,16 +19,27 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Capsis.Handler.Main;
 
-namespace Capsis.Handler
+namespace CapsisWebAPI
 {
-    public class Observation
+    public class AppSettings : CapsisProcessHandlerSettings
     {
-        public List<Object> values { get; set; }
+
+        private static readonly AppSettings _instance = new();
+
+        private AppSettings() : base("appsettings.json")
+        {
+        } 
+
+        /// <summary>
+        /// Provide access to the singleton of AppSettings instance
+        /// </summary>
+        /// <returns> the AppSettings singleton </returns>
+        public static AppSettings GetInstance()
+        {
+            return _instance;
+        }
+
     }
 }

@@ -1,4 +1,25 @@
-using Microsoft.Extensions.Configuration;
+/*
+ * This file is part of the CapsisWebAPI solution
+ *
+ * Author Jean-Francois Lavoie - Canadian Forest Service
+ * Copyright (C) 2023 His Majesty the King in Right of Canada
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU Lesser General Public
+ * License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+using Capsis.Handler.Main;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -6,13 +27,14 @@ namespace Capsis.Handler
 {
     [TestClass]
     public class CapsisHandlerTests
-    {        
-        private static String GetCapsisPath() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"]; }
-        private static String GetDataDirectory() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"]; }
-        private static int GetTimeoutMillisec() { return int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]);}
+    {
+        /*        private static String GetCapsisPath() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"]; }
+                private static String GetDataDirectory() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"]; }
+                private static int GetTimeoutMillisec() { return int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]);}
+        */
 
-
-        private static ILogger logger = new LoggerFactory().CreateLogger("CapsisHandler");
+        private static readonly CapsisProcessHandlerSettings Settings = new ("appsettings.json");
+        private static readonly ILogger Logger = new LoggerFactory().CreateLogger("CapsisHandler");
 
 
         [TestMethod]
@@ -20,7 +42,7 @@ namespace Capsis.Handler
         {
              try
             {
-                CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+                CapsisProcessHandler handler = new(Settings, Logger);
                 handler.Start();
                 Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is alive
                 Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is responding
@@ -51,7 +73,7 @@ namespace Capsis.Handler
         {
             try
             {
-                CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+                CapsisProcessHandler handler = new(Settings, Logger);
                 handler.Start();
                 int processID = handler.process.Id;
 
@@ -71,7 +93,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithSynchronousCall()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
             List<string> variantList = handler.VariantList();
             Assert.IsFalse(variantList.Count == 0);     // make sure the variant list isn't empty
@@ -86,7 +108,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallHappyPath()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
 
             // read the CSV data
@@ -115,7 +137,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallHappyPath_RE2_120()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
 
             // read the CSV data
@@ -144,7 +166,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallStopBeforeEnd()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
 
             // read the CSV data
@@ -162,7 +184,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallNoStopShouldExitAfterAWhile()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
             int processID = handler.process.Id;
 
@@ -184,7 +206,7 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerDefaultOutputRequest()
         {
-            CapsisProcessHandler handler = new(GetCapsisPath(), GetDataDirectory(), logger, GetTimeoutMillisec());
+            CapsisProcessHandler handler = new(Settings, Logger);
             handler.Start();
 
             // read the CSV data
