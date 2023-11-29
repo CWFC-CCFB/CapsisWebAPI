@@ -1,6 +1,7 @@
 using Capsis.Handler;
 using CapsisWebAPI.Controllers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using static Capsis.Handler.CapsisProcessHandler;
 
@@ -11,10 +12,13 @@ namespace CapsisWebAPI
     {
         private static readonly string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
 
+        private static ILogger logger = new LoggerFactory().CreateLogger("CapsisHandler");
+
+
         [TestMethod]
         public void Simulate_HappyPathTest()
         {
-            CapsisSimulationController controller = new(null);
+            CapsisSimulationController controller = new(logger);
 
             string data = File.ReadAllText("data/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
@@ -54,7 +58,7 @@ namespace CapsisWebAPI
         [TestMethod]
         public void Simulate_CancelTest()
         {
-            CapsisSimulationController controller = new(null);
+            CapsisSimulationController controller = new(logger);
 
             string data = File.ReadAllText("data/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };

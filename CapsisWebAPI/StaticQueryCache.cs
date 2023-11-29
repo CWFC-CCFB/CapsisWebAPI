@@ -30,23 +30,25 @@ namespace CapsisWebAPI
             public List<ImportFieldElementIDCard> fields;
         }
 
-        public Dictionary<string, VariantData> variantDataMap;
+        public Dictionary<String, VariantData> variantDataMap;
         public List<RequestType> requestTypes;
 
         /// <summary>
-        /// Fills the static cache from a temporary handler
+        /// Fill the static cache using a temporary handler
         /// </summary>
-        /// <param name="CapsisPath"></param>
-        /// <param name="DataDirectory"></param>
+        /// <param name="CapsisPath"> the path to CAPSIS app </param>
+        /// <param name="DataDirectory"> the path to the data directory </param>
+        /// <param name="logger"> the application logger </param>
+        /// <param name="TimeoutMillisec"> the number of milliseconds before calling a timeout </param>
         /// <returns>The StaticQueryCache created</returns>
-        public static StaticQueryCache FillStaticCache(string CapsisPath, string DataDirectory)
+        public static StaticQueryCache FillStaticCache(String CapsisPath, String DataDirectory, ILogger logger, int TimeoutMillisec)
         {
-            StaticQueryCache staticQueryCache = new StaticQueryCache();
+            StaticQueryCache staticQueryCache = new();
 
-            CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
+            CapsisProcessHandler handler = new(CapsisPath, DataDirectory, logger, TimeoutMillisec);
             handler.Start();
 
-            List<string> variantList = handler.VariantList();
+            List<String> variantList = handler.VariantList();
             foreach (var variant in variantList)
             {
                 StaticQueryCache.VariantData data = new StaticQueryCache.VariantData();
@@ -54,7 +56,7 @@ namespace CapsisWebAPI
                 // query variant species
                 foreach (var speciesCode in Enum.GetValues<VariantSpecies.Type>())
                 {
-                    List<string> result = handler.VariantSpecies(variant, speciesCode);
+                    List<String> result = handler.VariantSpecies(variant, speciesCode);
                     data.speciesMap[speciesCode] = result;
                 }
 

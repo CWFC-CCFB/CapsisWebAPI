@@ -3,15 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33414.496
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestJavaProcess", "TestJavaProcess\TestJavaProcess.csproj", "{2DE05BC2-3435-4E9E-8AE4-AE6DE301F724}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Capsis.Handler", "Capsis.Handler\Capsis.Handler.csproj", "{CCC8D911-3A5B-4AB0-A35B-9C2833B36120}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CapsisWebAPI", "CapsisWebAPI\CapsisWebAPI.csproj", "{12BAB147-4BA8-4A12-A90B-5C23D88C8ABE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Capsis.Handler.Tests", "Capsis.Handler.Tests\Capsis.Handler.Tests.csproj", "{2948F6DE-5858-4BF5-8AD6-EEDA80D7C6E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CapsisWebAPI.Tests", "CapsisWebAPI.Tests\CapsisWebAPI.Tests.csproj", "{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CapsisWebAPI.Tests", "CapsisWebAPI.Tests\CapsisWebAPI.Tests.csproj", "{D9535637-A3B8-4DF4-A3C3-73F35C063ECE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,10 +17,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2DE05BC2-3435-4E9E-8AE4-AE6DE301F724}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2DE05BC2-3435-4E9E-8AE4-AE6DE301F724}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2DE05BC2-3435-4E9E-8AE4-AE6DE301F724}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2DE05BC2-3435-4E9E-8AE4-AE6DE301F724}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CCC8D911-3A5B-4AB0-A35B-9C2833B36120}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CCC8D911-3A5B-4AB0-A35B-9C2833B36120}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCC8D911-3A5B-4AB0-A35B-9C2833B36120}.Release|Any CPU.ActiveCfg = Release|Any CPU

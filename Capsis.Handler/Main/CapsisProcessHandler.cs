@@ -1,22 +1,14 @@
 ﻿using Capsis.Handler.Main;
 using Capsis.Handler.Requests;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Data;
 using System.Diagnostics;
-using System.Net;
 using System.Net.Sockets;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Xml;
-using static System.Net.Mime.MediaTypeNames;
 
 [assembly: InternalsVisibleTo("Capsis.Handler.Tests")]
 namespace Capsis.Handler
-{
+{ 
     public class CapsisProcessHandler
     {
         public class SimulationStatus
@@ -51,16 +43,17 @@ namespace Capsis.Handler
             ERROR            
         }
 
-        string capsisPath;
-        string dataDirectory;
-        bool disableJavaWatchdog;
+        private readonly String capsisPath;
+        private readonly String dataDirectory;
+        private readonly int _timeoutMilliSec;
+        private bool disableJavaWatchdog;
 
         double progress;     // value between [0,1] only valid when in STARTED mode
 
-        string result;      // a string containing the result from the last COMPLETED message
+        string? result;      // a string containing the result from the last COMPLETED message
 
         State state;
-        string errorMessage;   
+        string? errorMessage;   
         internal Thread? thread;  
         internal Process? process;
         bool ownsProcess;
@@ -72,10 +65,30 @@ namespace Capsis.Handler
         StreamWriter? writerProcessInput;
         StreamReader? processStdOut = null;
 
-        public CapsisProcessHandler(string capsisPath, string dataDirectory, bool disableJavaWatchdog = false, int bindToPort = 0)
-        {            
+        private readonly ILogger _logger;
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="capsisPath"> path to CAPSIS application </param> 
+        /// <param name="dataDirectory"> path to data directory </param>
+        /// <param name="logger"> a logger instance </param>
+        /// <param name "timeoutMilliSec"> the number of millisecond before calling the JVM unresponsive </param>
+        /// <param name="disableJavaWatchdog"> a boolean to enable or disable JavaWatchDog (by default to false) </param> 
+        /// <param name="bindToPort"> an optional port number (typically in debug mode) </param> 
+        public CapsisProcessHandler(String capsisPath, 
+            String dataDirectory, 
+            ILogger logger,  
+            int timeoutMilliSec,
+            bool disableJavaWatchdog = false, 
+            int bindToPort = 0)
+        {
             this.capsisPath = capsisPath;
             this.dataDirectory = dataDirectory;
+            this._logger = logger;
+            if (timeoutMilliSec < 0)
+                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
+            this._timeoutMilliSec = timeoutMilliSec;
             state = State.INIT;            
             thread = null;
             process = null;
@@ -87,17 +100,17 @@ namespace Capsis.Handler
             csvFilename = null;
         }        
 
-        public State getState() { return state; }
-        public double getProgress() { return progress; }
-        public string getErrorMessage() { return errorMessage; }    
-        public string getResult() {
+        public State GetState() { return state; }
+        public double GetProgress() { return progress; }
+        public string? GetErrorMessage() { return errorMessage; }    
+        public string? GetResult() {
             lock (this)
             {
                 return result;
             }
         }
 
-        public string getCSVFilename() { return csvFilename; }
+        public string? GetCSVFilename() { return csvFilename; }
 
         public void Start()
         {
@@ -117,10 +130,11 @@ namespace Capsis.Handler
 
             if (!thread.IsAlive || state != State.READY)
             {
-                throw new InvalidOperationException("CapsisProcess could not start async thread.  Message : " + errorMessage);
+                throw new InvalidOperationException("CapsisProcess could not start async thread. Message : " + errorMessage);
             }
         }
 
+        
         void SendMessage(ArtScriptMessage msg)
         {
             if (writerProcessInput == null)
@@ -149,22 +163,35 @@ namespace Capsis.Handler
             Console.WriteLine(DateTime.Now.ToString() + " StdOutPrinter stopping");
         }
 
+        /// <summary>
+        /// Add quotes to the string if it contains at least one space. This method 
+        /// is needed to properly initialize the Java Virtual Machine. If some paths
+        /// contain spaces without being quoted, the initialization systematically fails.
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        private string AddQuoteToStringIfNeeded(string str)
+        {   
+            string trimmedStr = str.Trim();
+
+            return trimmedStr.Contains(" ") ?  "\"" + trimmedStr + "\"" : trimmedStr;
+        }
+
         void LaunchProcess()
         {
             bool stopListening = false;
             progress = 0.0;
 
-            StreamReader? readerProcessOutput = null;
+            StreamReader readerProcessOutput;
             TcpClient? client = null;
 
             if (bindToPort == 0)    // if a port is specified, then do not spawn a new process, but connect to it
             {
-                string classPathOption = "-cp ";
-                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + ";";
-                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + "ext/*;";
-                classPathOption += capsisPath + Path.AltDirectorySeparatorChar + "class;";
+                String classPathOption = "-cp ";
+                classPathOption += AddQuoteToStringIfNeeded(capsisPath + Path.AltDirectorySeparatorChar + "class") + ";";
+                classPathOption += AddQuoteToStringIfNeeded(capsisPath + Path.AltDirectorySeparatorChar + "ext/*");
 
-                ProcessStartInfo processStartInfo = new ProcessStartInfo();
+                ProcessStartInfo processStartInfo = new();
                 processStartInfo.UseShellExecute = false;
                 processStartInfo.RedirectStandardInput = true;
                 processStartInfo.RedirectStandardOutput = true;
@@ -175,6 +202,7 @@ namespace Capsis.Handler
 
                 try
                 {
+                    _logger.LogInformation("Starting Java with parameters: " + processStartInfo.ToString());
                     process = Process.Start(processStartInfo);
                     if (process == null)
                     {
@@ -214,18 +242,18 @@ namespace Capsis.Handler
 
             while (readerProcessOutput != null && !stopListening)
             {                
-                Task<string> readLineTask = readerProcessOutput.ReadLineAsync();
+                Task<string?> readLineTask = readerProcessOutput.ReadLineAsync();
 
-                if (readLineTask.Wait(10000))   // timeout after 10s
+                if (readLineTask.Wait(_timeoutMilliSec))   
                 {
-                    string line = readLineTask.Result;
+                    string? line = readLineTask.Result;
                     if (line != null)
                     {
                         Console.WriteLine(DateTime.Now.ToString() + " RECEIVED :" + line);
 
                         try
                         {
-                            ArtScriptMessage msg = JsonConvert.DeserializeObject<ArtScriptMessage>(line);
+                            ArtScriptMessage? msg = JsonConvert.DeserializeObject<ArtScriptMessage>(line);
                             if (msg != null)
                             {
                                 if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_PORT)))
@@ -242,7 +270,7 @@ namespace Capsis.Handler
                                             processStdOut = readerProcessOutput;
                                             readerProcessOutput = new StreamReader(client.GetStream());
                                             writerProcessInput = new StreamWriter(client.GetStream());
-                                            Thread stdoutWriter = new Thread(new ThreadStart(StdOutPrinter));
+                                            Thread stdoutWriter = new(new ThreadStart(StdOutPrinter));
                                             stdoutWriter.Start();
                                         }
                                         catch (Exception e) 
@@ -250,7 +278,8 @@ namespace Capsis.Handler
                                             Console.WriteLine("Cannot establish connection with process on port " + msg.payload + ".  Aborting.");
                                             try
                                             {
-                                                process.Kill();
+                                                if (process != null)
+                                                    process.Kill();
                                             }
                                             catch (Exception ex)
                                             {

@@ -2,11 +2,7 @@ using Capsis.Handler;
 using Capsis.Handler.Requests;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
-using System.Data;
-using Microsoft.Extensions.Configuration;
 using Capsis.Handler.Main;
-using System.Net.NetworkInformation;
-using System.Threading.Tasks;
 using static Capsis.Handler.CapsisProcessHandler;
 using System.Reflection;
 
@@ -17,11 +13,13 @@ namespace CapsisWebAPI.Controllers
     [Produces("application/json")]
     public class CapsisSimulationController : ControllerBase
     {               
-        private readonly ILogger<CapsisSimulationController>? _logger;
+        private readonly ILogger _logger;
         
         private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
         private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
         private static readonly int MaxProcessNumber = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["MaxProcessNumber"]);
+        private static readonly int TimeoutMillisec = int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]); 
+
 
         static Dictionary<string, CapsisProcessHandler> handlerDict = new Dictionary<string, CapsisProcessHandler>();
         static Dictionary<string, SimulationStatus?> resultDict = new Dictionary<string, SimulationStatus?>();
@@ -30,8 +28,14 @@ namespace CapsisWebAPI.Controllers
 
         public static void setStaticQueryCache(StaticQueryCache cache) { staticQueryCache = cache; }
 
-        public CapsisSimulationController(ILogger<CapsisSimulationController>? logger)
-        {            
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="logger"> An ILogger instance. It cannot be null.</param>
+        public CapsisSimulationController(ILogger logger)
+        {
+            if (logger == null)
+                throw new ArgumentNullException("The logger parameter cannot be null!");
             _logger = logger;            
         }
 
@@ -178,7 +182,7 @@ namespace CapsisWebAPI.Controllers
                     List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
                     List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
 
-                    CapsisProcessHandler handler = new(CapsisPath, DataDirectory);
+                    CapsisProcessHandler handler = new(CapsisPath, DataDirectory, _logger, TimeoutMillisec);
 
                     handler.Start();
 
