@@ -49,13 +49,6 @@ This will result in the app files being deployed in the CapsisWebAPI\bin\Release
 dotnet publish -c Release -r win-x64 
 ```
 
-6. cd into the publish subfolder (as specified in step 4) then launch :
-```
-	CAPSISWebAPI.exe
-```
-
-This should start the service (which will probably crash because it needs its capsis dependency to launch properly).  
-
 ## IIS Setup
 
 ### IIS Installation
@@ -106,7 +99,11 @@ Create and setup the website folder
 2. Under Recycling set the "Regular time intervals (minutes)" option to 0 (by default it is set to 1740 min (i.e. 29 hours))
 
 ### Startup and test
-1. Copy the build 
+1. Copy the build using a command line as Administrator:
+~~~
+update_app CapsisWebAPI_A
+~~~
+
 2. Click on the website then click on the Start button on the right panel under "Manage Website" to make sure it is started
 3. Open a browser and use address "server.ip.address" and you should see the CapsisWebAPI home page
 
