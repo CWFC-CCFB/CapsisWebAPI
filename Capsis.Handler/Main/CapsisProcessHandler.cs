@@ -221,7 +221,7 @@ namespace Capsis.Handler
 
                 try
                 {
-                    _logger.LogInformation("Starting Java with parameters: " + processStartInfo.ToString());
+                    _logger.LogInformation("Starting Java with parameters: " + processStartInfo.Arguments);
                     process = Process.Start(processStartInfo);
                     if (process == null)
                     {
@@ -251,7 +251,7 @@ namespace Capsis.Handler
                     readerProcessOutput = new StreamReader(client.GetStream());
                     writerProcessInput = new StreamWriter(client.GetStream());                    
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     ErrorMessage = "Unable to bind to forced port " + bindToPort;
                     Status = State.ERROR;
@@ -292,7 +292,7 @@ namespace Capsis.Handler
                                             Thread stdoutWriter = new(new ThreadStart(StdOutPrinter));
                                             stdoutWriter.Start();
                                         }
-                                        catch (Exception e) 
+                                        catch (Exception) 
                                         {
                                             Console.WriteLine("Cannot establish connection with process on port " + msg.payload + ".  Aborting.");
                                             try
@@ -300,7 +300,7 @@ namespace Capsis.Handler
                                                 if (process != null)
                                                     process.Kill();
                                             }
-                                            catch (Exception ex)
+                                            catch (Exception)
                                             {
                                                 ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
                                                 Status = State.ERROR;
@@ -360,7 +360,7 @@ namespace Capsis.Handler
                                 }
                             }
                         }
-                        catch (JsonReaderException e)
+                        catch (JsonReaderException)
                         {
                             // silently ignore this unknown message
                         }
@@ -375,7 +375,7 @@ namespace Capsis.Handler
                         {
                             process.Kill();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
                             Status = State.ERROR;
@@ -446,7 +446,7 @@ namespace Capsis.Handler
             return new List<string> { "Artemis" };
         }
 
-        public List<string> VariantSpecies(string variant, VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
+        public List<string>? VariantSpecies(string variant, VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
         {
             if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
@@ -473,7 +473,7 @@ namespace Capsis.Handler
             return RequestType.requestTypeList;
         }
 
-        public List<ImportFieldElementIDCard> VariantFieldList(string variant)
+        public List<ImportFieldElementIDCard>? VariantFieldList(string variant)
         {
             Enum.Parse(typeof(Variant), variant);
 

@@ -34,7 +34,7 @@ namespace CapsisWebAPI.Controllers
     [Produces("application/json")]
     public class CapsisSimulationController : ControllerBase
     {               
-        private readonly ILogger _logger;
+        private readonly ILogger<CapsisSimulationController> _logger;
         
 //        private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
 //        private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
@@ -53,7 +53,7 @@ namespace CapsisWebAPI.Controllers
         /// Constructor.
         /// </summary>
         /// <param name="logger"> An ILogger instance. It cannot be null.</param>
-        public CapsisSimulationController(ILogger logger)
+        public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
         {
             if (logger == null)
                 throw new ArgumentNullException("The logger parameter cannot be null!");
@@ -116,7 +116,7 @@ namespace CapsisWebAPI.Controllers
         [Route("VariantList")]
         public IActionResult VariantList()
         {            
-            var result = staticQueryCache.variantDataMap.Keys.ToList();
+            var result = staticQueryCache.VariantDataMap.Keys.ToList();
 
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
@@ -132,7 +132,7 @@ namespace CapsisWebAPI.Controllers
             {                
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
 
-                var result = staticQueryCache.variantDataMap[variant].speciesMap[enumType];
+                var result = staticQueryCache.VariantDataMap[variant].SpeciesMap[enumType];
 
                 if (HttpContext != null)
                     LogRequest(HttpContext.Request);
@@ -152,7 +152,7 @@ namespace CapsisWebAPI.Controllers
         [Route("OutputRequestTypes")]
         public IActionResult OutputRequestTypes()
         {
-            var result = staticQueryCache.requestTypes;
+            var result = staticQueryCache.RequestTypes;
 
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
@@ -166,7 +166,7 @@ namespace CapsisWebAPI.Controllers
         {            
             try
             {
-                var result = staticQueryCache.variantDataMap[variant].fields;
+                var result = staticQueryCache.VariantDataMap[variant].Fields;
 
                 if (HttpContext != null)
                     LogRequest(HttpContext.Request);
@@ -253,7 +253,7 @@ namespace CapsisWebAPI.Controllers
                     return Ok(status);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 string message = "Unrecognized taskID";
 

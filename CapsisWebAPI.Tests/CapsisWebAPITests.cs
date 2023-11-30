@@ -33,7 +33,7 @@ namespace CapsisWebAPI
     {
         private static readonly string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
 
-        private static ILogger logger = new LoggerFactory().CreateLogger("CapsisHandler");
+        private static ILogger<CapsisSimulationController> logger = new LoggerFactory().CreateLogger<CapsisSimulationController>();
 
 
         [TestMethod]

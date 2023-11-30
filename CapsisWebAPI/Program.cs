@@ -31,6 +31,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.Logger.LogInformation("CAPSIS path set to " + AppSettings.GetInstance().CapsisDirectory);
+app.Logger.LogInformation("DATA path set to " + AppSettings.GetInstance().DataDirectory);
+
 string DataDirectorySweeperMins = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectorySweeperMins"];
 DirectorySweeper sweeper = new DirectorySweeper(AppSettings.GetInstance().DataDirectory, int.Parse(DataDirectorySweeperMins));
 
