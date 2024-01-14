@@ -20,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 using Capsis.Handler.Main;
+using Capsis.Handler.Requests;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -65,7 +66,7 @@ namespace Capsis.Handler
             return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP), null);
         }
 
-        public static ArtScriptMessage CreateMessageSimulate(int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
+        public static ArtScriptMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
         {
             var simParams = new Dictionary<string, dynamic>();
             simParams.Add("initialDateYr", initialDateYr);
@@ -76,6 +77,7 @@ namespace Capsis.Handler
             simParams.Add("finalDateYr", finalDateYr);
             simParams.Add("fieldMatches", fieldMatches);
             simParams.Add("fileName", fileName);
+            simParams.Add("outputRequestList", outputRequestList);
 
             string payload = JsonConvert.SerializeObject(simParams);
             return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_SIMULATE), payload);
