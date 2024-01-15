@@ -77,7 +77,10 @@ namespace Capsis.Handler
             simParams.Add("finalDateYr", finalDateYr);
             simParams.Add("fieldMatches", fieldMatches);
             simParams.Add("fileName", fileName);
-            simParams.Add("outputRequestList", outputRequestList);
+            if (outputRequestList != null)
+            {
+                simParams.Add("outputRequestList", outputRequestList);
+            }
 
             string payload = JsonConvert.SerializeObject(simParams);
             return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_SIMULATE), payload);

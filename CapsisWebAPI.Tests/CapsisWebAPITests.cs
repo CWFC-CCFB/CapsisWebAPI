@@ -31,7 +31,6 @@ namespace CapsisWebAPI
     [TestClass]
     public class CapsisWebAPITests
     {
-        private static readonly string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
 
         private static ILogger<CapsisSimulationController> logger = new LoggerFactory().CreateLogger<CapsisSimulationController>();
 
@@ -39,21 +38,66 @@ namespace CapsisWebAPI
         [TestMethod]
         public void Simulate_HappyPathTest()
         {
+            string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
+            string taskID = StartSimulation(validOutputRequest);
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(1, outputTypes.Count);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[0]);
+        }
+
+
+        [TestMethod]
+        public void Simulate_HappyPathTest2()
+        {
+            string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }]";
+            string taskID = StartSimulation(validOutputRequest);
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(2, outputTypes.Count);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[0]);
+            Assert.AreEqual("AliveVolume_SAB", outputTypes[1]);
+        }
+
+        [TestMethod]
+        public void Simulate_HappyPathTest3()
+        {
+            string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":{ \"statusClass\":\"Dead\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
+            string taskID = StartSimulation(validOutputRequest);
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(3, outputTypes.Count);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[0]);
+            Assert.AreEqual("AliveVolume_SAB", outputTypes[1]);
+            Assert.AreEqual("DeadVolume_SEP", outputTypes[2]);
+        }
+
+
+
+        static string StartSimulation(string outputRequests)
+        {
             CapsisSimulationController controller = new(logger);
 
             string data = File.ReadAllText("data/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             string fieldMatchesJSON = JsonConvert.SerializeObject(fieldMatches);
 
-            IActionResult result = controller.Simulate(data, 100, validOutputRequest, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
+            IActionResult result = controller.Simulate(data, 100, outputRequests, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
             Assert.AreEqual("OkObjectResult", result.GetType().Name, "Did not receive an OkObjectResult result as expected but " + result.GetType().Name);   // OkObjectResult is expected because this call should succeed
             OkObjectResult oresult = (OkObjectResult)result;
             Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
 
             Assert.IsNotNull(oresult.Value);
             string taskID = (string)oresult.Value;
+            return taskID;
+        }
 
+        static SimulationStatus GetStatus(string taskID) {
+            CapsisSimulationController controller = new(logger);
             bool gotResults = false;
+            SimulationStatus status;
+            IActionResult result;
+            OkObjectResult oresult = null;
             while (!gotResults)
             {
                 result = controller.SimulationStatus(taskID);
@@ -61,24 +105,30 @@ namespace CapsisWebAPI
                 oresult = (OkObjectResult)result;
                 Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
                 Assert.IsNotNull(oresult.Value);
-                CapsisProcessHandler.SimulationStatus status = (CapsisProcessHandler.SimulationStatus)oresult.Value;
+                status = (CapsisProcessHandler.SimulationStatus)oresult.Value;
                 gotResults = status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED);
                 if (!gotResults)
                     Thread.Sleep(100);
             }
 
-            Assert.IsNotNull (oresult.Value);
+            Assert.IsNotNull(oresult.Value);
+            SimulationStatus statusToBeReturned = (SimulationStatus)oresult.Value;
 
+            //()oresult.Value.Result.outputTypes.
             // now also check that this task has been removed from the task table
             result = controller.SimulationStatus(taskID);
             Assert.AreEqual("BadRequestObjectResult", result.GetType().Name, "Did not receive a BadRequestObjectResult result as expected but " + result.GetType().Name);   // BadRequestObjectResult is expected because this call should fail
             BadRequestObjectResult BROresult = (BadRequestObjectResult)result;
             Assert.AreEqual(BROresult.StatusCode, 400, "Expected a 400 status code");
+
+            return statusToBeReturned;
         }
 
         [TestMethod]
         public void Simulate_CancelTest()
         {
+            string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
+
             CapsisSimulationController controller = new(logger);
 
             string data = File.ReadAllText("data/STR_RE2_70.csv");
