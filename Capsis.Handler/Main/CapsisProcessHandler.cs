@@ -431,7 +431,7 @@ namespace Capsis.Handler
 
                 Status = State.OPERATION_PENDING;
                 Result = null;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
+                ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(outputRequestList, initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
                 SendMessage(msg);
             }
 
