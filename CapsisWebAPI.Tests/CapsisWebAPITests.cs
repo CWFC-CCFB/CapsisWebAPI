@@ -39,7 +39,9 @@ namespace CapsisWebAPI
         public void Simulate_HappyPathTest()
         {
             string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
-            string taskID = StartSimulation(validOutputRequest);
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(1, outputTypes.Count);
@@ -51,7 +53,9 @@ namespace CapsisWebAPI
         public void Simulate_HappyPathTest2()
         {
             string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }]";
-            string taskID = StartSimulation(validOutputRequest);
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(2, outputTypes.Count);
@@ -63,7 +67,9 @@ namespace CapsisWebAPI
         public void Simulate_HappyPathTest3()
         {
             string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":{ \"statusClass\":\"Dead\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
-            string taskID = StartSimulation(validOutputRequest);
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(3, outputTypes.Count);
@@ -72,14 +78,23 @@ namespace CapsisWebAPI
             Assert.AreEqual("DeadVolume_SEP", outputTypes[2]);
         }
 
+        [TestMethod]
+        public void Simulate_WithError()
+        {
+            string validOutputRequest = "[{ \"requestType\":{ \"statusClass\":\"Alive\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":{ \"statusClass\":\"Dead\",\"variable\":\"Volume\"},\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
+            string data = File.ReadAllText("data/STR_3O_BjR_MS_Pe_NA_v12_10.csv");
+            int[] fieldMatches = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1, -1 };
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
+            SimulationStatus simStatus = GetStatus(taskID);
+
+            Assert.IsTrue(simStatus.Status.Equals("ERROR"));
+        }
 
 
-        static string StartSimulation(string outputRequests)
+        static string StartSimulation(string outputRequests, string data, int[] fieldMatches)
         {
             CapsisSimulationController controller = new(logger);
 
-            string data = File.ReadAllText("data/STR_RE2_70.csv");
-            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             string fieldMatchesJSON = JsonConvert.SerializeObject(fieldMatches);
 
             IActionResult result = controller.Simulate(data, 100, outputRequests, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
@@ -106,7 +121,7 @@ namespace CapsisWebAPI
                 Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
                 Assert.IsNotNull(oresult.Value);
                 status = (CapsisProcessHandler.SimulationStatus)oresult.Value;
-                gotResults = status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED);
+                gotResults = !status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS);
                 if (!gotResults)
                     Thread.Sleep(100);
             }
