@@ -1,6 +1,7 @@
 ﻿using Capsis.Handler;
 using Capsis.Handler.Main;
 using Capsis.Handler.Requests;
+using static Capsis.Handler.CapsisProcessHandler;
 
 namespace CapsisWebAPI
 {
@@ -18,10 +19,13 @@ namespace CapsisWebAPI
             public Dictionary<VariantSpecies.Type, List<string>> SpeciesMap { get; private set; }
             public List<ImportFieldElementIDCard> Fields { get; private set; }
 
+            public List<string> Requests { get; private set; }
+
             public VariantData()
             {
                 SpeciesMap = new Dictionary<VariantSpecies.Type, List<string>>();
                 Fields = new List<ImportFieldElementIDCard>();
+                Requests = new List<string>();      
             }
 
             private class VariantSpeciesData
@@ -32,13 +36,11 @@ namespace CapsisWebAPI
         }
 
 
-        public Dictionary<String, VariantData> VariantDataMap { get; private set; }
-        public List<RequestType> RequestTypes { get; private set; }
+        public Dictionary<Variant, VariantData> VariantDataMap { get; private set; }
 
         public StaticQueryCache()
         {
-            VariantDataMap = new Dictionary<string, VariantData>();
-            RequestTypes = new List<RequestType>();
+            VariantDataMap = new Dictionary<Variant, VariantData>();
         }
 
 
@@ -56,36 +58,38 @@ namespace CapsisWebAPI
 
             StaticQueryCache staticQueryCache = new();
 
-            CapsisProcessHandler handler = new(appSettings, logger);
-            handler.Start();
 
-            List<String> variantList = handler.VariantList();
-            foreach (var variant in variantList)
+            List<Variant> variantList = CapsisProcessHandler.GetVariantList();
+            foreach (Variant variant in variantList)
             {
+                CapsisProcessHandler handler = new(appSettings, logger, variant);
+                handler.Start();
+
                 StaticQueryCache.VariantData data = new();
 
                 // query variant species
                 foreach (var speciesCode in Enum.GetValues<VariantSpecies.Type>())
                 {
-                    List<String> speciesList = handler.VariantSpecies(variant, speciesCode);
+                    List<string> speciesList = handler.VariantSpecies(speciesCode);
                     data.SpeciesMap[speciesCode] = speciesList;
                 }
 
                 data.Fields.Clear();
-                data.Fields.AddRange(handler.VariantFieldList(variant));
+                data.Fields.AddRange(handler.VariantFieldList());
+
+                data.Requests.Clear();
+                data.Requests.AddRange(handler.VariantRequests());
 
                 staticQueryCache.VariantDataMap[variant] = data;
+
+                handler.Stop();
+                if (handler.ErrorMessage != null)
+                {
+                    logger.LogError("An error occurred while performing the static query: " + handler.ErrorMessage);
+                    throw new Exception(handler.ErrorMessage);
+                }
             }
 
-            staticQueryCache.RequestTypes.Clear();
-            staticQueryCache.RequestTypes.AddRange(handler.OutputRequestTypes());
-
-            handler.Stop();
-            if (handler.ErrorMessage != null)
-            {
-                logger.LogError("An error occurred while performing the static query: " + handler.ErrorMessage);
-                throw new Exception(handler.ErrorMessage);
-            }
 
             logger.LogInformation("Static query cache successfully initalized: " + staticQueryCache.ToString());
             return staticQueryCache;
@@ -93,7 +97,7 @@ namespace CapsisWebAPI
 
         public override string ToString()
         {
-            return "Variants: " + VariantDataMap.ToString() + " Request types: " + RequestTypes.ToString();
+            return "Variants: " + VariantDataMap.ToString();
         }
     }
 }

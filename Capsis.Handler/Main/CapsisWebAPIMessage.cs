@@ -22,28 +22,23 @@
 using Capsis.Handler.Main;
 using Capsis.Handler.Requests;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Capsis.Handler
 {
-    internal class ArtScriptMessage
+    internal class CapsisWebAPIMessage
     {
-        public enum ArtScriptMessageType
+        public enum CapsisWebAPIMessageType
         {
-            ARTSCRIPT_MESSAGE_STATUS,
-            ARTSCRIPT_MESSAGE_STOP,
-            ARTSCRIPT_MESSAGE_SIMULATE,
-            ARTSCRIPT_MESSAGE_SIMULATION_STARTED,
-            ARTSCRIPT_MESSAGE_GET_SPECIES_OF_TYPE,
-            ARTSCRIPT_MESSAGE_GET_FIELDS,
-            ARTSCRIPT_MESSAGE_ERROR,
-            ARTSCRIPT_MESSAGE_COMPLETED,
-            ARTSCRIPT_MESSAGE_PORT
+            MESSAGE_STATUS,
+            MESSAGE_STOP,
+            MESSAGE_SIMULATE,
+            MESSAGE_SIMULATION_STARTED,
+            MESSAGE_GET_SPECIES_OF_TYPE,
+            MESSAGE_GET_FIELDS,
+            MESSAGE_GET_REQUESTS,
+            MESSAGE_ERROR,
+            MESSAGE_COMPLETED,
+            MESSAGE_PORT
         }
 
         enum ArtScriptSpeciesType
@@ -52,7 +47,7 @@ namespace Capsis.Handler
             BroadleavedSpecies
         }
 
-        public ArtScriptMessage(string message, string payload)
+        public CapsisWebAPIMessage(string message, string payload)
         {
             this.message = message;
             this.payload = payload;
@@ -61,12 +56,12 @@ namespace Capsis.Handler
         public string message { set; get; }
         public string payload { set; get; }
 
-        public static ArtScriptMessage CreateMessageStop()
+        public static CapsisWebAPIMessage CreateMessageStop()
         {
-            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP), null);
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STOP), null);
         }
 
-        public static ArtScriptMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
+        public static CapsisWebAPIMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
         {
             var simParams = new Dictionary<string, dynamic>();
             simParams.Add("initialDateYr", initialDateYr);
@@ -83,24 +78,30 @@ namespace Capsis.Handler
             }
 
             string payload = JsonConvert.SerializeObject(simParams);
-            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_SIMULATE), payload);
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_SIMULATE), payload);
         }
 
-        public static ArtScriptMessage CreateMessageGetSpeciesOfType(VariantSpecies.Type speciesType)
+        public static CapsisWebAPIMessage CreateMessageGetSpeciesOfType(VariantSpecies.Type speciesType)
         {            
             string? species = speciesType == VariantSpecies.Type.All ? null : speciesType == VariantSpecies.Type.Coniferous ? Enum.GetName(ArtScriptSpeciesType.ConiferousSpecies) : Enum.GetName(ArtScriptSpeciesType.BroadleavedSpecies);
 
-            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_GET_SPECIES_OF_TYPE), species);
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_SPECIES_OF_TYPE), species);
         }
 
-        public static ArtScriptMessage CreateMessageGetFieldList()
+        public static CapsisWebAPIMessage CreateMessageGetFieldList()
         {
-            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_GET_FIELDS), null);
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_FIELDS), null);
         }
 
-        public static ArtScriptMessage CreateMessageStatus()
+        public static CapsisWebAPIMessage CreateMessageGetRequestList()
         {
-            return new ArtScriptMessage(Enum.GetName<ArtScriptMessageType>(ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS), null);
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_REQUESTS), null);
+        }
+
+
+        public static CapsisWebAPIMessage CreateMessageStatus()
+        {
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STATUS), null);
         }
     }
 }
