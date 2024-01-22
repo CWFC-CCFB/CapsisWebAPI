@@ -9,7 +9,7 @@ REM Deploy Capsis installation - the ant script messes up the current directory 
 set "CUR_DIR=%~dp0"
 REM create a capsis/jar subfolder that is needed by the ant script to operate
 mkdir %CAPSISWEBAPI_CAPSIS_PATH%\jar
-call %CAPSISWEBAPI_CAPSIS_PATH%\ant.bat installer-export -Dmodules="quebecmrnf/**,artemis/**"
+call %CAPSISWEBAPI_CAPSIS_PATH%\ant.bat installer-export -Dmodules="quebecmrnf/**,artemis/**,artemis2014/**"
 robocopy %CAPSISWEBAPI_CAPSIS_PATH%\export c:\inetpub\%1\capsis /E /purge
 cd %CUR_DIR%
 mkdir c:\inetpub\%1\capsis\data
