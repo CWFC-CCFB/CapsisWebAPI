@@ -89,6 +89,21 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
+        public void VariantListTest()
+        {
+            CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
+            CapsisSimulationController controller = new(logger);
+            IActionResult result = controller.VariantList();
+            Assert.IsTrue(result is OkObjectResult);
+            List<string> variantList = (List<string>)((OkObjectResult)result).Value;
+            Assert.AreEqual(2, variantList.Count);
+            Assert.IsTrue(variantList.Contains("ARTEMIS"));
+            Assert.IsTrue(variantList.Contains("ARTEMIS2014"));
+        }
+
+
+
+        [TestMethod]
         public void PossibleRequests()
         {
             CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));

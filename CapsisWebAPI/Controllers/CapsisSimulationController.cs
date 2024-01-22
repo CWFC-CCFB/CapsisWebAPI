@@ -116,12 +116,13 @@ namespace CapsisWebAPI.Controllers
         [Route("VariantList")]
         public IActionResult VariantList()
         {            
-            var result = staticQueryCache.VariantDataMap.Keys.ToList();
+            List<Variant> result = staticQueryCache.VariantDataMap.Keys.ToList();
+            List<string> variantStrings = result.Select(x => Enum.GetName(x)).ToList();
 
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
 
-            return Ok(result);   
+            return Ok(variantStrings);   
         }
 
         /// <summary>
