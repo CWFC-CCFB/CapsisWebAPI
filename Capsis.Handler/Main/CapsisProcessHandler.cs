@@ -26,6 +26,7 @@ using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using static Capsis.Handler.CapsisWebAPIMessage;
 
 [assembly: InternalsVisibleTo("Capsis.Handler.Tests")]
 namespace Capsis.Handler
@@ -53,7 +54,7 @@ namespace Capsis.Handler
             public ScriptResult? Result { get; private set; }            
         }
 
-        public enum Variant { Artemis }
+        public enum Variant { ARTEMIS, ARTEMIS2014 }
 
         public enum State
         {
@@ -92,6 +93,8 @@ namespace Capsis.Handler
         private readonly ILogger _logger;
         private bool stopRequested;
 
+        private readonly Variant _variant;
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -102,7 +105,8 @@ namespace Capsis.Handler
         /// <param name="disableJavaWatchdog"> a boolean to enable or disable JavaWatchDog (by default to false) </param> 
         /// <param name="bindToPort"> an optional port number (typically in debug mode) </param> 
         public CapsisProcessHandler(CapsisProcessHandlerSettings settings,
-            ILogger logger,  
+            ILogger logger,
+            Variant variant,
             bool disableJavaWatchdog = false, 
             int bindToPort = 0)
         {
@@ -110,6 +114,7 @@ namespace Capsis.Handler
                 throw new ArgumentNullException("The settings and logger parameters cannot be non null!");
             this._settings = settings;
             this._logger = logger;
+            this._variant = variant;
             Status = State.INIT;            
             thread = null;
             process = null;
@@ -154,7 +159,7 @@ namespace Capsis.Handler
         }
 
         
-        void SendMessage(ArtScriptMessage msg)
+        void SendMessage(CapsisWebAPIMessage msg)
         {
             if (writerProcessInput == null)
                 throw new InvalidOperationException("Cannot send message to a null process");
@@ -196,6 +201,8 @@ namespace Capsis.Handler
             return trimmedStr.Contains(" ") ?  "\"" + trimmedStr + "\"" : trimmedStr;
         }
 
+  
+
         void LaunchProcess()
         {
             bool stopListening = false;
@@ -215,7 +222,7 @@ namespace Capsis.Handler
                 processStartInfo.RedirectStandardInput = true;
                 processStartInfo.RedirectStandardOutput = true;
                 processStartInfo.FileName = "java.exe";
-                processStartInfo.Arguments = classPathOption + " artemis.script.ArtScript";
+                processStartInfo.Arguments = classPathOption + " capsis.util.extendeddefaulttype.webapi.CapsisWebAPIScriptRunner --variant " + _variant.ToString();
                 if (disableJavaWatchdog)
                     processStartInfo.Arguments += " --disableWatchdog";
 
@@ -272,10 +279,10 @@ namespace Capsis.Handler
 
                         try
                         {
-                            ArtScriptMessage? msg = JsonConvert.DeserializeObject<ArtScriptMessage>(line);
+                            CapsisWebAPIMessage? msg = JsonConvert.DeserializeObject<CapsisWebAPIMessage>(line);
                             if (msg != null)
                             {
-                                if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_PORT)))
+                                if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_PORT)))
                                 {   // this is a special message : it tells the current process to switch the communication to port x
                                     lock (this)
                                     {
@@ -311,7 +318,7 @@ namespace Capsis.Handler
                                         }
                                     }
                                 }
-                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STATUS)))
+                                else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STATUS)))
                                 {
                                     lock (this)
                                     {                                        
@@ -319,19 +326,19 @@ namespace Capsis.Handler
                                         {
                                             Progress = Double.Parse(msg.payload);   
                                         }
-                                        
-                                        ArtScriptMessage reply = ArtScriptMessage.CreateMessageStatus();
+
+                                        CapsisWebAPIMessage reply = CapsisWebAPIMessage.CreateMessageStatus();
                                         SendMessage(reply);
                                     }
                                 }
-                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_SIMULATION_STARTED)))
+                                else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_SIMULATION_STARTED)))
                                 {
                                     lock (this)
                                     {
                                         Status = State.READY;
                                     }
                                 }
-                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_STOP)))
+                                else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STOP)))
                                 {
                                     lock (this)
                                     {
@@ -342,7 +349,7 @@ namespace Capsis.Handler
                                         Status = State.READY;
                                     }
                                 }
-                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_ERROR)))
+                                else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_ERROR)))
                                 {
                                     lock (this)
                                     {                                                                                
@@ -350,7 +357,7 @@ namespace Capsis.Handler
                                         ErrorMessage = msg.payload;
                                     }
                                 }
-                                else if (msg.message.Equals(Enum.GetName<ArtScriptMessage.ArtScriptMessageType>(ArtScriptMessage.ArtScriptMessageType.ARTSCRIPT_MESSAGE_COMPLETED)))
+                                else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_COMPLETED)))
                                 {
                                     lock (this)
                                     {                                        
@@ -406,7 +413,7 @@ namespace Capsis.Handler
             lock (this)
             {
                 Status = State.OPERATION_PENDING;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageStop();
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageStop();
                 SendMessage(msg);
             }
 
@@ -414,12 +421,10 @@ namespace Capsis.Handler
                 Thread.Sleep(1);
         }
 
-        public Guid Simulate(string variant, string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
+        public Guid Simulate(string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
         {
             if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
-
-            Enum.Parse(typeof(Variant), variant);
 
             Guid guid = Guid.NewGuid();
 
@@ -431,7 +436,7 @@ namespace Capsis.Handler
 
                 Status = State.OPERATION_PENDING;
                 Result = null;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageSimulate(outputRequestList, initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageSimulate(outputRequestList, initialDateYr, isStochastic, nbRealizations, applicationScale, climateChange, finalDateYr, fieldMatches, csvFilename);
                 SendMessage(msg);
             }
 
@@ -441,12 +446,12 @@ namespace Capsis.Handler
             return guid;
         }
 
-        public List<string> VariantList()
+        public static List<Variant> GetVariantList()
         {
-            return new List<string> { "Artemis" };
+            return new List<Variant> { Variant.ARTEMIS, Variant.ARTEMIS2014 };
         }
 
-        public List<string>? VariantSpecies(string variant, VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
+        public List<string>? VariantSpecies(VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
         {
             if (ownsProcess && process == null)
                 throw new Exception("Cannot send stop message on null process");
@@ -455,7 +460,7 @@ namespace Capsis.Handler
             {
                 Status = State.OPERATION_PENDING;
                 Result = null;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetSpeciesOfType(type);
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageGetSpeciesOfType(type);
                 SendMessage(msg);
             }
 
@@ -468,20 +473,32 @@ namespace Capsis.Handler
             }
         }
 
-        public List<RequestType> OutputRequestTypes()
-        {               
-            return RequestType.requestTypeList;
-        }
-
-        public List<ImportFieldElementIDCard>? VariantFieldList(string variant)
+        public List<string> VariantRequests()
         {
-            Enum.Parse(typeof(Variant), variant);
-
             lock (this)
             {
                 Status = State.OPERATION_PENDING;
                 Result = null;
-                ArtScriptMessage msg = ArtScriptMessage.CreateMessageGetFieldList();
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageGetRequestList();
+                SendMessage(msg);
+            }
+
+            while (Status == State.OPERATION_PENDING)
+                Thread.Sleep(1);
+
+            lock (this)
+            {
+                return JsonConvert.DeserializeObject<List<string>>(Result);
+            }
+        }
+
+        public List<ImportFieldElementIDCard> VariantFieldList()
+        {
+            lock (this)
+            {
+                Status = State.OPERATION_PENDING;
+                Result = null;
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageGetFieldList();
                 SendMessage(msg);
             }
 

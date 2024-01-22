@@ -42,7 +42,7 @@ namespace Capsis.Handler
         {
              try
             {
-                CapsisProcessHandler handler = new(Settings, Logger);
+                CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
                 handler.Start();
                 Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is alive
                 Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is responding
@@ -73,7 +73,7 @@ namespace Capsis.Handler
         {
             try
             {
-                CapsisProcessHandler handler = new(Settings, Logger);
+                CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
                 handler.Start();
                 int processID = handler.process.Id;
 
@@ -93,9 +93,9 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithSynchronousCall()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
-            List<string> variantList = handler.VariantList();
+            List<CapsisProcessHandler.Variant> variantList = CapsisProcessHandler.GetVariantList();
             Assert.IsFalse(variantList.Count == 0);     // make sure the variant list isn't empty
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
@@ -108,13 +108,13 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallHappyPath()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
+            handler.Simulate(data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
@@ -137,13 +137,13 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallHappyPath_RE2_120()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_120.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate("Artemis", data, null, 2000, true, 500, "Stand", "NoChange", 2080, fieldMatches);
+            handler.Simulate(data, null, 2000, true, 500, "Stand", "NoChange", 2080, fieldMatches);
             //Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             //Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
@@ -166,13 +166,13 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallStopBeforeEnd()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);               
+            handler.Simulate(data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);               
             Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
             Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
@@ -184,14 +184,14 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerLifeCycleWithAsynchronousCallNoStopShouldExitAfterAWhile()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
             int processID = handler.process.Id;
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate("Artemis", data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);
+            handler.Simulate(data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);
 
             Assert.IsTrue(IsProcessAlive(processID), "The process should exist right now");
 
@@ -206,13 +206,13 @@ namespace Capsis.Handler
         [TestMethod]
         public void TestCapsisHandlerDefaultOutputRequest()
         {
-            CapsisProcessHandler handler = new(Settings, Logger);
+            CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate("Artemis", data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
+            handler.Simulate(data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
             while (!handler.isResultAvailable())
             {
                 Thread.Sleep(100);

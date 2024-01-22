@@ -103,7 +103,7 @@ namespace CapsisWebAPI.Controllers
                 {
                     CapsisProcessHandler.SimulationStatus status = entry.Value.GetSimulationStatus();
                     resultDict[entry.Key] = status;
-                    if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {   // remove the task from the table once the results are being successfully returned                                                            
                         entry.Value.Stop();
                         handlerDict.Remove(entry.Key);                        
@@ -123,16 +123,27 @@ namespace CapsisWebAPI.Controllers
 
             return Ok(result);   
         }
-        
+
+        /// <summary>
+        /// Convert variant string to variant enum.
+        /// </summary>
+        /// <param name="variantStr"></param>
+        /// <returns></returns>
+        private static Variant ParseVariant(string variantStr)
+        {
+            Variant enumVariant = Enum.Parse<Variant>(variantStr.ToUpperInvariant().Trim());
+            return enumVariant;
+        }
+
         [HttpGet]
         [Route("VariantSpecies")]
-        public IActionResult VariantSpecies([Required][FromQuery] String variant = "Artemis", [FromQuery] String type = "All")
+        public IActionResult VariantSpecies([Required][FromQuery] string variant = "Artemis", [FromQuery] string type = "All")
         {            
             try
             {                
                 var enumType = Enum.Parse<VariantSpecies.Type>(type);
-
-                var result = staticQueryCache.VariantDataMap[variant].SpeciesMap[enumType];
+                Variant variantEnum = ParseVariant(variant);
+                var result = staticQueryCache.VariantDataMap[variantEnum].SpeciesMap[enumType];
 
                 if (HttpContext != null)
                     LogRequest(HttpContext.Request);
@@ -150,9 +161,10 @@ namespace CapsisWebAPI.Controllers
         
         [HttpGet]
         [Route("OutputRequestTypes")]
-        public IActionResult OutputRequestTypes()
+        public IActionResult OutputRequestTypes([Required][FromQuery] string variant = "Artemis")
         {
-            var result = staticQueryCache.RequestTypes;
+            Variant variantEnum = ParseVariant(variant);
+            var result = staticQueryCache.VariantDataMap[variantEnum].Requests;
 
             if (HttpContext != null)
                 LogRequest(HttpContext.Request);
@@ -162,11 +174,12 @@ namespace CapsisWebAPI.Controllers
         
         [HttpGet]
         [Route("VariantFields")]
-        public IActionResult VariantFields([Required][FromQuery] String variant = "Artemis")
+        public IActionResult VariantFields([Required][FromQuery] string variant = "Artemis")
         {            
             try
             {
-                var result = staticQueryCache.VariantDataMap[variant].Fields;
+                Variant variantEnum = ParseVariant(variant);
+                var result = staticQueryCache.VariantDataMap[variantEnum].Fields;
 
                 if (HttpContext != null)
                     LogRequest(HttpContext.Request);
@@ -184,7 +197,7 @@ namespace CapsisWebAPI.Controllers
         
         [HttpPost]
         [Route("Simulate")]
-        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] String variant = "Artemis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
+        public IActionResult Simulate([Required][FromForm] String data, [Required][FromQuery] int years, [FromForm] String? output = null, [Required][FromQuery] string variant = "Artemis", [Required][FromQuery] int initialYear = -1, [Required][FromQuery] bool isStochastic = false, [Required][FromQuery] int nbRealizations = 0, [Required][FromQuery] String applicationScale = "Stand", [Required][FromQuery] String climateChange = "NoChange", [Required][FromQuery] string? fieldMatches = null)
         {                        
             try
             {
@@ -203,14 +216,15 @@ namespace CapsisWebAPI.Controllers
                     List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
                     List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
 
-                    CapsisProcessHandler handler = new(AppSettings.GetInstance(), _logger);
+                    Variant variantEnum = ParseVariant(variant);
+                    CapsisProcessHandler handler = new(AppSettings.GetInstance(), _logger, variantEnum);
 
                     handler.Start();
 
                     if (initialYear == -1)
                         initialYear = DateTime.Now.Year;
 
-                    Guid newTaskGuid = handler.Simulate(variant, data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
+                    Guid newTaskGuid = handler.Simulate(data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
 
                     handlerDict[newTaskGuid.ToString()] = handler;
                     resultDict[newTaskGuid.ToString()] = handler.GetSimulationStatus();
@@ -241,7 +255,7 @@ namespace CapsisWebAPI.Controllers
                     processHandlerDict();
                     
                     CapsisProcessHandler.SimulationStatus status = resultDict[taskID];
-                    if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.COMPLETED))
+                    if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {
                         // remove the task from the table once the results are being successfully returned                                                            
                         resultDict.Remove(taskID);
