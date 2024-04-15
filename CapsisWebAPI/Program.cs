@@ -52,6 +52,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+app.Logger.LogInformation("CAPSISWebAPI version " + AppSettings.GetInstance().Version);
 app.Logger.LogInformation("CAPSIS path set to " + AppSettings.GetInstance().CapsisDirectory);
 app.Logger.LogInformation("DATA path set to " + AppSettings.GetInstance().DataDirectory);
 

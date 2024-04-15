@@ -20,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 using Capsis.Handler.Main;
+using System.Reflection;
 
 namespace CapsisWebAPI
 {
@@ -28,8 +29,27 @@ namespace CapsisWebAPI
 
         private static readonly AppSettings _instance = new();
 
+        public string Version { get; private set; } 
+
         private AppSettings() : base("appsettings.json")
         {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            //           string assemblyName = assembly.GetName().Name;
+            Type gitVersionInformationType = assembly.GetType("GitVersionInformation");
+            if (gitVersionInformationType != null)
+            {
+                FieldInfo fieldMajor = gitVersionInformationType.GetField("Major");
+                FieldInfo fieldMinor = gitVersionInformationType.GetField("Minor");
+                FieldInfo fieldPatch = gitVersionInformationType.GetField("Patch");
+                string majorStr = fieldMajor.GetValue(null).ToString();
+                string minorStr = fieldMinor.GetValue(null).ToString();
+                string patchStr = fieldPatch.GetValue(null).ToString();
+                Version = majorStr + "." + minorStr + "." + patchStr;
+            }
+            else
+            {
+                Version = "unknown";
+            }
         } 
 
         /// <summary>

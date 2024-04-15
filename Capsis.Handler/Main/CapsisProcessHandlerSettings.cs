@@ -29,6 +29,7 @@ namespace Capsis.Handler.Main
         public string CapsisDirectory { get; private set; }
         public string DataDirectory { get; private set; }
         public int TimeoutMilliseconds { get; private set; }
+        public int TimeoutMillisecondsRefHandler { get; private set; }
 
         /// <summary>
         /// Provide the settings for the CapsisProcessHandler class.
@@ -51,10 +52,17 @@ namespace Capsis.Handler.Main
             DataDirectory = Directory.Exists(potentialDataPath) ? potentialDataPath : cb["DataDirectory"];
             if (!Directory.Exists(DataDirectory))
                 throw new ArgumentException("The DATA folder: " + DataDirectory + " does not exist!");
-            int timeoutMillisec = int.Parse(cb["TimeoutMillisec"]);
+            TimeoutMilliseconds = GetMilliseconds(cb, "TimeoutMillisec");
+            TimeoutMillisecondsRefHandler = GetMilliseconds(cb, "TimeoutMillisecRefHandler");
+        }
+
+
+        private static int GetMilliseconds(IConfigurationRoot cb, string slotname)
+        {
+            int timeoutMillisec = int.Parse(cb[slotname]);
             if (timeoutMillisec < 0)
-                throw new ArgumentException("The timeoutMilliSec parameter should be positive (e.g. >= 0)!");
-            TimeoutMilliseconds = timeoutMillisec;
+                throw new ArgumentException($"The {slotname} parameter in the JSON configuration file should be positive (e.g. >= 0)!");
+            return timeoutMillisec;
         }
     }
 }
