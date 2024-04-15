@@ -33,6 +33,7 @@ namespace Capsis.Handler
 { 
     public class CapsisProcessHandler
     {
+
         public class SimulationStatus
         {
             public static readonly string COMPLETED = "COMPLETED";
@@ -94,6 +95,7 @@ namespace Capsis.Handler
         private bool stopRequested;
 
         private readonly Variant _variant;
+        private readonly int _timeoutMillisec;
 
         /// <summary>
         /// Constructor.
@@ -104,11 +106,13 @@ namespace Capsis.Handler
         /// <param name "timeoutMilliSec"> the number of millisecond before calling the JVM unresponsive </param>
         /// <param name="disableJavaWatchdog"> a boolean to enable or disable JavaWatchDog (by default to false) </param> 
         /// <param name="bindToPort"> an optional port number (typically in debug mode) </param> 
+        /// <param name="refHandler"> a boolean to indicate whether this handler is the reference handler</param>
         public CapsisProcessHandler(CapsisProcessHandlerSettings settings,
             ILogger logger,
             Variant variant,
             bool disableJavaWatchdog = false, 
-            int bindToPort = 0)
+            int bindToPort = 0,
+            bool refHandler = false)
         {
             if (settings == null || logger == null)
                 throw new ArgumentNullException("The settings and logger parameters cannot be non null!");
@@ -125,6 +129,7 @@ namespace Capsis.Handler
             this.bindToPort = bindToPort;
             csvFilename = null;
             stopRequested = false;
+            this._timeoutMillisec = refHandler ? settings.TimeoutMillisecondsRefHandler : settings.TimeoutMilliseconds;
         }        
 
         public string? GetResult() {
@@ -270,7 +275,7 @@ namespace Capsis.Handler
             {                
                 Task<string?> readLineTask = readerProcessOutput.ReadLineAsync();
 
-                if (readLineTask.Wait(_settings.TimeoutMilliseconds))   
+                if (readLineTask.Wait(this._timeoutMillisec))   // We give plenty of time for the reference handler
                 {
                     string? line = readLineTask.Result;
                     if (line != null)
@@ -309,7 +314,7 @@ namespace Capsis.Handler
                                             }
                                             catch (Exception)
                                             {
-                                                ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                                                ErrorMessage = "Exception caught while trying to kill the process with pid " + (process != null ? process.Id : "unknown");
                                                 Status = State.ERROR;
                                                 return;
                                             }
@@ -377,9 +382,10 @@ namespace Capsis.Handler
                 {   // process is non-responsive
                     if (ownsProcess && process != null)
                     {
-                        Console.WriteLine(DateTime.Now.ToString() + " Process " + process.Id + " is unresponsive.  Killing it.");
                         try
                         {
+                            ErrorMessage = DateTime.Now.ToString() + " Process " + process.Id + " is unresponsive. Killing it.";
+                            Status = State.ERROR;
                             process.Kill();
                         }
                         catch (Exception)
@@ -390,7 +396,6 @@ namespace Capsis.Handler
                         }
                         processStdOut = null;
                         readerProcessOutput = null;
-                        Status = State.ERROR;
                         stopListening = true;
                     }
                 }

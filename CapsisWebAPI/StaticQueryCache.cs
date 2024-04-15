@@ -62,7 +62,7 @@ namespace CapsisWebAPI
             List<Variant> variantList = CapsisProcessHandler.GetVariantList();
             foreach (Variant variant in variantList)
             {
-                CapsisProcessHandler handler = new(appSettings, logger, variant);
+                CapsisProcessHandler handler = new(appSettings, logger, variant, refHandler : true);
                 handler.Start();
 
                 StaticQueryCache.VariantData data = new();
