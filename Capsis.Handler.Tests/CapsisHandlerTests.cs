@@ -28,14 +28,9 @@ namespace Capsis.Handler
     [TestClass]
     public class CapsisHandlerTests
     {
-        /*        private static String GetCapsisPath() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"]; }
-                private static String GetDataDirectory() { return new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"]; }
-                private static int GetTimeoutMillisec() { return int.Parse(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["TimeoutMillisec"]);}
-        */
 
         private static readonly CapsisProcessHandlerSettings Settings = new ("appsettings.json");
         private static readonly ILogger Logger = new LoggerFactory().CreateLogger("CapsisHandler");
-
 
         [TestMethod]
         public void TestCapsisHandlerStart()

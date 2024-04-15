@@ -30,6 +30,10 @@ namespace CapsisWebAPI
 
         private AppSettings() : base("appsettings.json")
         {
+
+
+
+
         } 
 
         /// <summary>
