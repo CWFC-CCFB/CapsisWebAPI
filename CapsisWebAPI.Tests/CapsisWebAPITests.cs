@@ -114,6 +114,18 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
+        public void CapsisStatusTest()
+        {
+            CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
+            CapsisSimulationController controller = new(logger);
+            IActionResult result = controller.CapsisStatus();
+            Assert.IsTrue(result is OkObjectResult);
+            Assert.AreEqual(3, ((Dictionary<String, Object>)((OkObjectResult)result).Value).Count);
+        }
+
+
+
+        [TestMethod]
         public void Simulate_WithError()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":\"DeadVolume\",\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";

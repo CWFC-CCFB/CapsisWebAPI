@@ -39,8 +39,8 @@ namespace Capsis.Handler
             {
                 CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
                 handler.Start();
-                Assert.AreEqual(false, handler.process.HasExited);  // make sure the underlying capsis process is alive
-                Assert.AreEqual(true, handler.process.Responding);  // make sure the underlying capsis process is responding
+                Assert.AreEqual(false, handler.Process.HasExited);  // make sure the underlying capsis process is alive
+                Assert.AreEqual(true, handler.Process.Responding);  // make sure the underlying capsis process is responding
                 Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // make sure the handler is in READY state                    
                 handler.Stop();
             }
@@ -70,14 +70,16 @@ namespace Capsis.Handler
             {
                 CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
                 handler.Start();
-                int processID = handler.process.Id;
+                int processID = handler.Process.Id;
 
                 Assert.IsTrue(IsProcessAlive(processID), "The process should exist right now");
                 
-                handler.process = null; // reinitializing the process member will force the monitoring thread to exit, and thus stop sending STATUS watchdog messages
-                Thread.Sleep(12000);
+                handler.stopListening = true; // reinitializing the process member will force the monitoring thread to exit, and thus stop sending STATUS watchdog messages
+                Thread.Sleep(30000);
 
-                Assert.IsTrue(IsProcessAlive(processID), "The process should not exist anymore after a while");
+                bool processHasExited = handler.Process.HasExited;
+                Assert.IsTrue(processHasExited, "The process should not exist anymore after a while");
+                Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
             }
             catch (Exception ex)
             {
@@ -92,12 +94,12 @@ namespace Capsis.Handler
             handler.Start();
             List<CapsisProcessHandler.Variant> variantList = CapsisProcessHandler.GetVariantList();
             Assert.IsFalse(variantList.Count == 0);     // make sure the variant list isn't empty
-            Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
-            Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
+            Assert.AreEqual(false, handler.Process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
+            Assert.AreEqual(true, handler.Process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after a synced call)
             handler.Stop();
-            Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
-            Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
+            Assert.AreEqual(true, handler.Process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
+            Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
         }
 
         [TestMethod]
@@ -110,8 +112,8 @@ namespace Capsis.Handler
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate(data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
-            Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
-            Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
+            Assert.AreEqual(false, handler.Process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
+            Assert.AreEqual(true, handler.Process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
             double progress = handler.Progress;
             while (!handler.isResultAvailable())
@@ -125,8 +127,8 @@ namespace Capsis.Handler
             Assert.IsTrue(handler.GetResult().Length > 0);
 
             handler.Stop();
-            Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
-            Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
+            Assert.AreEqual(true, handler.Process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
+            Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
         }
 
         [TestMethod]
@@ -154,8 +156,8 @@ namespace Capsis.Handler
             Assert.IsTrue(handler.GetResult().Length > 0);
 
             handler.Stop();
-            Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
-            Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
+            Assert.AreEqual(true, handler.Process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
+            Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
         }
 
         [TestMethod]
@@ -168,12 +170,12 @@ namespace Capsis.Handler
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
             handler.Simulate(data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);               
-            Assert.AreEqual(false, handler.process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
-            Assert.AreEqual(true, handler.process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
+            Assert.AreEqual(false, handler.Process.HasExited, "Process should not have exited yet");  // make sure the underlying capsis process is still alive
+            Assert.AreEqual(true, handler.Process.Responding, "Process should be responding");  // make sure the underlying capsis process is still responding            
             Assert.AreEqual(CapsisProcessHandler.State.READY, handler.Status);  // ensure handler is still in READY state (after an async call)
             handler.Stop();
-            Assert.AreEqual(true, handler.process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
-            Assert.AreEqual(0, handler.process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
+            Assert.AreEqual(true, handler.Process.HasExited, "Process should have exited by now");  // make sure the underlying capsis process has exited
+            Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
         }
 
         [TestMethod]
@@ -181,21 +183,21 @@ namespace Capsis.Handler
         {
             CapsisProcessHandler handler = new(Settings, Logger, CapsisProcessHandler.Variant.ARTEMIS);
             handler.Start();
-            int processID = handler.process.Id;
+            int processID = handler.Process.Id;
 
             // read the CSV data
             string data = File.ReadAllText("dataTest/STR_RE2_70.csv");
             int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            handler.Simulate(data, null, 2000, true, 1000, "Stand", "NoChange", 2100, fieldMatches);
+            handler.Simulate(data, null, 2000, true, 200, "Stand", "NoChange", 2100, fieldMatches);
 
             Assert.IsTrue(IsProcessAlive(processID), "The process should exist right now");
 
-            handler.process = null; // reinitializing the process member will force the monitoring thread to exit, and thus stop sending STATUS watchdog messages
-            Thread.Sleep(12000);
+            handler.stopListening = true; // reinitializing the process member will force the monitoring thread to exit, and thus stop sending STATUS watchdog messages
+            Thread.Sleep(30000);
 
-            Assert.IsTrue(IsProcessAlive(processID), "The process should not exist anymore after a while");
-
-            Assert.IsNull(handler.process);
+            bool processHasExited = handler.Process.HasExited;
+            Assert.IsTrue(processHasExited, "The process should not exist anymore after a while");
+            Assert.AreEqual(0, handler.Process.ExitCode, "Process exit code should be 0");  // make sure the underlying capsis process has exited with exit code 0
         }
 
         [TestMethod]

@@ -116,7 +116,9 @@ namespace CapsisWebAPI.Controllers
         [Route("CapsisStatus")]
         public IActionResult CapsisStatus()
         {
-            LogRequest(HttpContext.Request);
+            if (HttpContext != null)
+                LogRequest(HttpContext.Request);
+
             Dictionary<string, object> resultJSON = new();
 
             // do not output all the AppSettings because they contain sensitive information
@@ -124,6 +126,7 @@ namespace CapsisWebAPI.Controllers
 
             Dictionary<string, object> settingsJSON = new();
             settingsJSON["ServerVersion"] = settings.Version;   // Version is now set through GitVersion.MSBuild
+            settingsJSON["CapsisVersion"] = staticQueryCache.CAPSISVersion;
             settingsJSON["Properly loaded"] = staticQueryCache.VariantDataMap.Count > 0;
             return Ok(settingsJSON);
         }
