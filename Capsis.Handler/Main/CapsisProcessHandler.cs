@@ -78,10 +78,11 @@ namespace Capsis.Handler
 
         public State Status { get; private set; }
 
+        internal Process Process { get; private set; }
+
 
         public string? ErrorMessage { get; private set; }  
         internal Thread? thread;  
-        internal Process? process;
         bool ownsProcess;
 
         string? csvFilename;
@@ -95,7 +96,9 @@ namespace Capsis.Handler
         private bool stopRequested;
 
         private readonly Variant _variant;
-        private readonly int _timeoutMillisec;
+        private readonly int _timeoutSec;
+
+        internal bool stopListening;
 
         /// <summary>
         /// Constructor.
@@ -121,7 +124,7 @@ namespace Capsis.Handler
             this._variant = variant;
             Status = State.INIT;            
             thread = null;
-            process = null;
+            Process = null;
             ownsProcess = false;
             Result = null;
             writerProcessInput = null;
@@ -129,7 +132,7 @@ namespace Capsis.Handler
             this.bindToPort = bindToPort;
             csvFilename = null;
             stopRequested = false;
-            this._timeoutMillisec = refHandler ? settings.TimeoutMillisecondsRefHandler : settings.TimeoutMilliseconds;
+            this._timeoutSec = refHandler ? settings.TimeoutSecondsRefHandler : settings.TimeoutSeconds;
         }        
 
         public string? GetResult() {
@@ -141,6 +144,11 @@ namespace Capsis.Handler
 
         public string? GetCSVFilename() { return csvFilename; }
 
+        /// <summary>
+        /// Start the monitoring thread.<p>
+        /// The monitoring thread starts CAPSIS and receives messages from CAPSIS.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
         public void Start()
         {
             if (Status != State.INIT)
@@ -184,10 +192,17 @@ namespace Capsis.Handler
         {
             Console.WriteLine(DateTime.Now.ToString() + " StdOutPrinter starting");
 
-            while (processStdOut != null)
+            while (processStdOut != null && !stopListening)
             {
-                Console.WriteLine("_JAVA : " + DateTime.Now.ToString() + " :" + processStdOut.ReadLine());
+                string? line = processStdOut.ReadLine();
+                if (line != null)
+                {
+                    Console.WriteLine("_JAVA : " + DateTime.Now.ToString() + " :" + line);
+                }
             }
+
+            if (processStdOut != null)  
+                processStdOut.Close();
 
             Console.WriteLine(DateTime.Now.ToString() + " StdOutPrinter stopping");
         }
@@ -210,7 +225,7 @@ namespace Capsis.Handler
 
         void LaunchProcess()
         {
-            bool stopListening = false;
+            stopListening = false;
             Progress = 0.0;
 
             StreamReader readerProcessOutput;
@@ -231,11 +246,13 @@ namespace Capsis.Handler
                 if (disableJavaWatchdog)
                     processStartInfo.Arguments += " --disableWatchdog";
 
+                processStartInfo.Arguments += " --timeout " + _timeoutSec;
+
                 try
                 {
                     _logger.LogInformation("Starting Java with parameters: " + processStartInfo.Arguments);
-                    process = Process.Start(processStartInfo);
-                    if (process == null)
+                    Process = Process.Start(processStartInfo);
+                    if (Process == null || Process.HasExited)
                     {
                         ErrorMessage = "Could not start the process " + processStartInfo.FileName + " with arguments " + processStartInfo.Arguments;
                         Status = State.ERROR;
@@ -251,7 +268,7 @@ namespace Capsis.Handler
 
                 ownsProcess = true;
 
-                readerProcessOutput = process.StandardOutput;
+                readerProcessOutput = Process.StandardOutput;
             }                                    
             else            
             {
@@ -271,11 +288,11 @@ namespace Capsis.Handler
                 }
             }            
 
-            while (readerProcessOutput != null && !stopListening)
+            while (readerProcessOutput != null && !stopListening && !Process.HasExited)
             {                
                 Task<string?> readLineTask = readerProcessOutput.ReadLineAsync();
 
-                if (readLineTask.Wait(this._timeoutMillisec))   // We give plenty of time for the reference handler
+                if (readLineTask.Wait(this._timeoutSec * 1000))   // We give plenty of time for the reference handler
                 {
                     string? line = readLineTask.Result;
                     if (line != null)
@@ -309,12 +326,12 @@ namespace Capsis.Handler
                                             Console.WriteLine("Cannot establish connection with process on port " + msg.payload + ".  Aborting.");
                                             try
                                             {
-                                                if (process != null)
-                                                    process.Kill();
+                                                if (Process != null)
+                                                    Process.Kill();
                                             }
                                             catch (Exception)
                                             {
-                                                ErrorMessage = "Exception caught while trying to kill the process with pid " + (process != null ? process.Id : "unknown");
+                                                ErrorMessage = "Exception caught while trying to kill the process with pid " + (Process != null ? Process.Id : "unknown");
                                                 Status = State.ERROR;
                                                 return;
                                             }
@@ -347,10 +364,9 @@ namespace Capsis.Handler
                                 {
                                     lock (this)
                                     {
-                                        processStdOut = null;
                                         stopListening = true;
                                         if (ownsProcess)
-                                            process.WaitForExit();
+                                            Process.WaitForExit();
                                         Status = State.READY;
                                     }
                                 }
@@ -380,30 +396,36 @@ namespace Capsis.Handler
                 }
                 else
                 {   // process is non-responsive
-                    if (ownsProcess && process != null)
+                    if (ownsProcess && Process != null)
                     {
                         try
                         {
-                            ErrorMessage = DateTime.Now.ToString() + " Process " + process.Id + " is unresponsive. Killing it.";
+                            ErrorMessage = DateTime.Now.ToString() + " Process " + Process.Id + " is unresponsive. Killing it.";
                             Status = State.ERROR;
-                            process.Kill();
+                            Process.Kill();
                         }
                         catch (Exception)
                         {
-                            ErrorMessage = "Exception caught while trying to kill the process with pid " + process.Id;
+                            ErrorMessage = "Exception caught while trying to kill the process with pid " + Process.Id;
                             Status = State.ERROR;
                             return;
                         }
-                        processStdOut = null;
-                        readerProcessOutput = null;
                         stopListening = true;
                     }
                 }
             }
 
-            if (ownsProcess && process != null && process.HasExited && !stopRequested)  // at this point, the process should be running
+            if (stopListening)
             {
-                ErrorMessage = "Process terminated unexpectedly in directory " + _settings.CapsisDirectory;
+                if (readerProcessOutput != null)
+                {
+                    readerProcessOutput.Close();
+                }
+            }
+
+            if (ownsProcess && Process != null && Process.HasExited && !stopRequested)  // at this point, the process should be running
+            {
+                ErrorMessage = $"Process terminated unexpectedly (exit code = {Process.ExitCode}) in directory " + _settings.CapsisDirectory;
                 Status = State.ERROR;
                 return;
             }
@@ -412,7 +434,7 @@ namespace Capsis.Handler
         public void Stop()
         {
             stopRequested = true;
-            if (ownsProcess && process == null)
+            if (ownsProcess && Process == null)
                 throw new InvalidOperationException("Cannot send stop message on null process");
 
             lock (this)
@@ -422,13 +444,13 @@ namespace Capsis.Handler
                 SendMessage(msg);
             }
 
-            while (Status == State.OPERATION_PENDING || (process != null && !process.HasExited))
+            while (Status == State.OPERATION_PENDING || (Process != null && !Process.HasExited))
                 Thread.Sleep(1);
         }
 
         public Guid Simulate(string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
         {
-            if (ownsProcess && process == null)
+            if (ownsProcess && Process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             Guid guid = Guid.NewGuid();
@@ -458,7 +480,7 @@ namespace Capsis.Handler
 
         public List<string>? VariantSpecies(VariantSpecies.Type type = Capsis.Handler.Main.VariantSpecies.Type.All)
         {
-            if (ownsProcess && process == null)
+            if (ownsProcess && Process == null)
                 throw new Exception("Cannot send stop message on null process");
 
             lock (this)
@@ -496,6 +518,45 @@ namespace Capsis.Handler
                 return JsonConvert.DeserializeObject<List<string>>(Result);
             }
         }
+
+        public string RetrieveCAPSISVersion()
+        {
+            lock (this)
+            {
+                Status = State.OPERATION_PENDING;
+                Result = null;
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageVersion();
+                SendMessage(msg);
+            }
+
+            while (Status == State.OPERATION_PENDING)
+                Thread.Sleep(1);
+
+            lock (this)
+            {
+                return JsonConvert.DeserializeObject<string>(Result);
+            }
+        }
+
+        public List<string> RetrievePossibleMessages()
+        {
+            lock (this)
+            {
+                Status = State.OPERATION_PENDING;
+                Result = null;
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessagPossibleMessages();
+                SendMessage(msg);
+            }
+
+            while (Status == State.OPERATION_PENDING)
+                Thread.Sleep(1);
+
+            lock (this)
+            {
+                return JsonConvert.DeserializeObject<List<string>>(Result);
+            }
+        }
+
 
         public List<ImportFieldElementIDCard> VariantFieldList()
         {

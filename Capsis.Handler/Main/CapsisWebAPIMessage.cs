@@ -36,6 +36,8 @@ namespace Capsis.Handler
             MESSAGE_GET_SPECIES_OF_TYPE,
             MESSAGE_GET_FIELDS,
             MESSAGE_GET_REQUESTS,
+            MESSAGE_GET_VERSION,
+            MESSAGE_GET_POSSIBLE_MESSAGES,
             MESSAGE_ERROR,
             MESSAGE_COMPLETED,
             MESSAGE_PORT
@@ -56,12 +58,8 @@ namespace Capsis.Handler
         public string message { set; get; }
         public string payload { set; get; }
 
-        public static CapsisWebAPIMessage CreateMessageStop()
-        {
-            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STOP), null);
-        }
 
-        public static CapsisWebAPIMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
+        internal static CapsisWebAPIMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
         {
             var simParams = new Dictionary<string, dynamic>();
             simParams.Add("initialDateYr", initialDateYr);
@@ -81,27 +79,42 @@ namespace Capsis.Handler
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_SIMULATE), payload);
         }
 
-        public static CapsisWebAPIMessage CreateMessageGetSpeciesOfType(VariantSpecies.Type speciesType)
+        internal static CapsisWebAPIMessage CreateMessageGetSpeciesOfType(VariantSpecies.Type speciesType)
         {            
             string? species = speciesType == VariantSpecies.Type.All ? null : speciesType == VariantSpecies.Type.Coniferous ? Enum.GetName(ArtScriptSpeciesType.ConiferousSpecies) : Enum.GetName(ArtScriptSpeciesType.BroadleavedSpecies);
 
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_SPECIES_OF_TYPE), species);
         }
 
-        public static CapsisWebAPIMessage CreateMessageGetFieldList()
+        internal static CapsisWebAPIMessage CreateMessageGetFieldList()
         {
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_FIELDS), null);
         }
 
-        public static CapsisWebAPIMessage CreateMessageGetRequestList()
+        internal static CapsisWebAPIMessage CreateMessageGetRequestList()
         {
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_REQUESTS), null);
         }
 
-
-        public static CapsisWebAPIMessage CreateMessageStatus()
+        internal static CapsisWebAPIMessage CreateMessageStatus()
         {
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STATUS), null);
         }
+
+        internal static CapsisWebAPIMessage CreateMessageStop()
+        {
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STOP), null);
+        }
+
+        internal static CapsisWebAPIMessage CreateMessageVersion()
+        {
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_VERSION), null);
+        }
+
+        internal static CapsisWebAPIMessage CreateMessagPossibleMessages()
+        {
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_POSSIBLE_MESSAGES), null);
+        }
+
     }
 }
