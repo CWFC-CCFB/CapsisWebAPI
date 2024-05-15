@@ -500,6 +500,26 @@ namespace Capsis.Handler
             }
         }
 
+        public Dictionary<string, object> GetScope()
+        {
+            lock (this)
+            {
+                Status = State.OPERATION_PENDING;
+                Result = null;
+                CapsisWebAPIMessage msg = CapsisWebAPIMessage.CreateMessageGetScope();
+                SendMessage(msg);
+            }
+
+            while (Status == State.OPERATION_PENDING)
+                Thread.Sleep(1);
+
+            lock (this)
+            {
+                return JsonConvert.DeserializeObject<Dictionary<string, object>>(Result);
+            }
+
+        }
+
         public List<string> VariantRequests()
         {
             lock (this)

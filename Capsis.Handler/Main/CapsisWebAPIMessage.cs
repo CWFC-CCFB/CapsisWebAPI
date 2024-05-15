@@ -40,7 +40,8 @@ namespace Capsis.Handler
             MESSAGE_GET_POSSIBLE_MESSAGES,
             MESSAGE_ERROR,
             MESSAGE_COMPLETED,
-            MESSAGE_PORT
+            MESSAGE_PORT,
+            MESSAGE_GET_SCOPE
         }
 
         enum ArtScriptSpeciesType
@@ -94,6 +95,11 @@ namespace Capsis.Handler
         internal static CapsisWebAPIMessage CreateMessageGetRequestList()
         {
             return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_REQUESTS), null);
+        }
+
+        internal static CapsisWebAPIMessage CreateMessageGetScope()
+        {
+            return new CapsisWebAPIMessage(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_GET_SCOPE), null);
         }
 
         internal static CapsisWebAPIMessage CreateMessageStatus()

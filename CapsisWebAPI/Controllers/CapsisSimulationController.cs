@@ -200,7 +200,33 @@ namespace CapsisWebAPI.Controllers
 
             return Ok(result);
         }
-        
+
+
+        [HttpGet]
+        [Route("VariantScope")]
+        public IActionResult VariantScope([Required][FromQuery] string variant = "Artemis")
+        {
+            try
+            {
+                Variant variantEnum = ParseVariant(variant);
+                var result = staticQueryCache.VariantDataMap[variantEnum].Scope;
+
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (HttpContext != null)
+                    LogRequest(HttpContext.Request, ex.Message);
+
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+
         [HttpGet]
         [Route("VariantFields")]
         public IActionResult VariantFields([Required][FromQuery] string variant = "Artemis")

@@ -41,11 +41,14 @@ namespace CapsisWebAPI
 
             public List<string> Requests { get; private set; }
 
+            public Dictionary<string, object> Scope { get; private set; }   
+
             public VariantData()
             {
                 SpeciesMap = new Dictionary<VariantSpecies.Type, List<string>>();
                 Fields = new List<ImportFieldElementIDCard>();
                 Requests = new List<string>();      
+                Scope = new Dictionary<string, object>();
             }
 
             private class VariantSpeciesData
@@ -103,6 +106,10 @@ namespace CapsisWebAPI
 
                 data.Requests.Clear();
                 data.Requests.AddRange(handler.VariantRequests());
+
+                data.Scope.Clear();
+                foreach (var scopeElement in handler.GetScope())
+                    data.Scope.Add(scopeElement.Key, scopeElement.Value);
 
                 staticQueryCache.VariantDataMap[variant] = data;
 

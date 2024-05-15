@@ -42,6 +42,8 @@ namespace CapsisWebAPI
             StaticQueryCache cache = StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger);
             Assert.AreEqual(2, cache.VariantDataMap.Count);
             Assert.AreEqual(13, cache.VariantDataMap[Variant.ARTEMIS].Requests.Count);
+            Assert.AreEqual(1, cache.VariantDataMap[Variant.ARTEMIS].Scope.Count);
+            Assert.AreEqual(1, cache.VariantDataMap[Variant.ARTEMIS2014].Scope.Count);
         }
 
 
