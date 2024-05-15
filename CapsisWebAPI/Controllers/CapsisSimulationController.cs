@@ -95,7 +95,14 @@ namespace CapsisWebAPI.Controllers
             }
         }
 
-        protected void processHandlerDict()
+        /// <summary>
+        /// Update the handler and result dictionaries.
+        /// </summary>
+        /// <remarks>
+        /// The handler status is stored in the result dictionary. If this status is different from "IN PROGRESS",
+        /// the handler is removed from the handler dictionary.
+        /// </remarks>
+        protected void ProcessHandlerDict()
         {
             lock (resultDict)
             {
@@ -105,8 +112,9 @@ namespace CapsisWebAPI.Controllers
                     resultDict[entry.Key] = status;
                     if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {   // remove the task from the table once the results are being successfully returned                                                            
-                        entry.Value.Stop();
-                        handlerDict.Remove(entry.Key);                        
+                        _logger?.LogInformation($"Removing handler id {entry.Key} with status {status.Status} from handler dictionary.");
+                        entry.Value.Stop(); // request the handler to stop
+                        handlerDict.Remove(entry.Key); // remove the entry from the handler dictionary                        
                     }
                 }
             }
@@ -224,7 +232,7 @@ namespace CapsisWebAPI.Controllers
             {
                 lock (handlerDict)
                 {
-                    processHandlerDict();
+                    ProcessHandlerDict();
 
                     if (handlerDict.Count >= MaxProcessNumber)
                     {
@@ -273,11 +281,12 @@ namespace CapsisWebAPI.Controllers
             {
                 lock (handlerDict)
                 {
-                    processHandlerDict();
+                    ProcessHandlerDict(); // we update the result dictionary first
                     
                     CapsisProcessHandler.SimulationStatus status = resultDict[taskID];
                     if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {
+                        _logger?.LogInformation($"Task {taskID} is no longer in progress and therefore it will be removed from the result dictionary.");
                         // remove the task from the table once the results are being successfully returned                                                            
                         resultDict.Remove(taskID);
                     }
@@ -307,12 +316,13 @@ namespace CapsisWebAPI.Controllers
             {
                 lock (handlerDict)
                 {
-                    processHandlerDict();
+                    ProcessHandlerDict();
 
                     bool found = false;
                     // at this point, either the taskID is present in the handlerDict (not finished), the resultDict(finished) or not present (invalid)
                     if (handlerDict.ContainsKey(taskID))
                     {
+                        _logger?.LogInformation($"Cancelling unfinished task {taskID} and removing it from both handler and result dictionaries.");
                         handlerDict[taskID].Stop();
                         handlerDict.Remove(taskID);
                         resultDict.Remove(taskID);
@@ -322,6 +332,7 @@ namespace CapsisWebAPI.Controllers
                     {
                         if (resultDict.ContainsKey(taskID))
                         {
+                            _logger?.LogInformation($"Removing finished task {taskID} from both result dictionary.");
                             resultDict.Remove(taskID);
                             found = true;
                         }
@@ -336,6 +347,7 @@ namespace CapsisWebAPI.Controllers
                     }
                     else
                     {
+                        _logger?.LogWarning($"Task {taskID} has not been found in either the handler or the result dictionary. Therefore, it cannot be cancelled!");
                         string message = "Unrecognized taskID";
 
                         if (HttpContext != null)
