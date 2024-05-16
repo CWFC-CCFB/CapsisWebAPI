@@ -111,7 +111,9 @@ namespace CapsisWebAPI.Controllers
                     CapsisProcessHandler.SimulationStatus status = entry.Value.GetSimulationStatus();
                     resultDict[entry.Key] = status;
                     if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
-                    {   // remove the task from the table once the results are being successfully returned                                                            
+                    {   // remove the task from the table once the results are being successfully returned
+                        if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.ERROR))
+                            _logger?.LogError($"Handler {entry.Key} failed with error message: {entry.Value.ErrorMessage}");
                         _logger?.LogInformation($"Removing handler id {entry.Key} with status {status.Status} from handler dictionary.");
                         entry.Value.Stop(); // request the handler to stop
                         handlerDict.Remove(entry.Key); // remove the entry from the handler dictionary                        
