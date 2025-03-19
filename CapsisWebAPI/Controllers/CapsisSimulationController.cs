@@ -26,15 +26,19 @@ using System.ComponentModel.DataAnnotations;
 using Capsis.Handler.Main;
 using static Capsis.Handler.CapsisProcessHandler;
 using System.Reflection;
+using WebAPIUtilities.Controllers;
 
 namespace CapsisWebAPI.Controllers
 {
+
+
+
+
     [ApiController]
     [Route("[controller]")]
     [Produces("application/json")]
-    public class CapsisSimulationController : ControllerBase
+    public class CapsisSimulationController : AbstractWebAPIController
     {               
-        private readonly ILogger<CapsisSimulationController> _logger;
         
 //        private static readonly string CapsisPath = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["CapsisPath"];
 //        private static readonly string DataDirectory = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectory"];
@@ -52,47 +56,15 @@ namespace CapsisWebAPI.Controllers
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="logger"> An ILogger instance. It cannot be null.</param>
-        public CapsisSimulationController(ILogger<CapsisSimulationController> logger)
+        /// <param name="logger"> An ILogger instance.</param>
+        public CapsisSimulationController(ILogger<CapsisSimulationController> logger) : base(logger) {}
+
+
+        protected override Dictionary<string, string> GetStatusDictionary(string? clientversion)
         {
-            if (logger == null)
-                throw new ArgumentNullException("The logger parameter cannot be null!");
-            _logger = logger;            
-        }
-
-        protected string GetRequestIP(HttpRequest req)
-        {
-            string ip = "unknown IP";
-
-            if (req.Headers.ContainsKey("X-Forwarded-For"))
-            {
-                ip = req.Headers["X-Forwarded-For"].ToString();
-                if (ip.Contains(':'))
-                    ip = ip.Split(':')[0];
-            }
-            else
-            {
-                if (req.HttpContext.Connection.RemoteIpAddress != null)
-                    ip = req.HttpContext.Connection.RemoteIpAddress.ToString();
-            }
-
-            return ip;
-        }
-
-        /// <summary>
-        /// Logs a request to the log
-        /// </summary>
-        /// <param name="req">The request object to be logged</param>
-        /// <param name="errorMessage">optional errorMessage.  If no error message is provided (null), then the request is considered successful</param>
-        protected void LogRequest(HttpRequest req, string? errorMessage = null)
-        {
-            if (_logger != null)
-            {
-                if (errorMessage == null)
-                    _logger.LogInformation("Success processing request " + req.Method + " " + req.Path + req.QueryString + " from " + GetRequestIP(req));
-                else
-                    _logger.LogInformation("Error processing request " + req.Method + " " + req.Path + req.QueryString + " from " + GetRequestIP(req) + ".  Message : " + errorMessage);
-            }
+            Dictionary<string, string> outputDict = base.GetStatusDictionary(clientversion);
+            outputDict["Capsis version"] = staticQueryCache.CAPSISVersion;
+            return outputDict;
         }
 
         /// <summary>
@@ -113,8 +85,8 @@ namespace CapsisWebAPI.Controllers
                     if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {   // remove the task from the table once the results are being successfully returned
                         if (status.Status.Equals(CapsisProcessHandler.SimulationStatus.ERROR))
-                            _logger?.LogError($"Handler {entry.Key} failed with error message: {entry.Value.ErrorMessage}");
-                        _logger?.LogInformation($"Removing handler id {entry.Key} with status {status.Status} from handler dictionary.");
+                            GetLogger().LogError($"Handler {entry.Key} failed with error message: {entry.Value.ErrorMessage}");
+                        GetLogger().LogInformation($"Removing handler id {entry.Key} with status {status.Status} from handler dictionary.");
                         entry.Value.Stop(); // request the handler to stop
                         handlerDict.Remove(entry.Key); // remove the entry from the handler dictionary                        
                     }
@@ -122,25 +94,7 @@ namespace CapsisWebAPI.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("CapsisStatus")]
-        public IActionResult CapsisStatus()
-        {
-            if (HttpContext != null)
-                LogRequest(HttpContext.Request);
-
-            Dictionary<string, object> resultJSON = new();
-
-            // do not output all the AppSettings because they contain sensitive information
-            AppSettings settings = CapsisWebAPI.AppSettings.GetInstance();
-
-            Dictionary<string, object> settingsJSON = new();
-            settingsJSON["ServerVersion"] = settings.Version;   // Version is now set through GitVersion.MSBuild
-            settingsJSON["CapsisVersion"] = staticQueryCache.CAPSISVersion;
-            settingsJSON["Properly loaded"] = staticQueryCache.VariantDataMap.Count > 0;
-            return Ok(settingsJSON);
-        }
-
+  
 
         [HttpGet]
         [Route("VariantList")]
@@ -271,17 +225,29 @@ namespace CapsisWebAPI.Controllers
                     }
 
                     List<OutputRequest>? outputRequestList = output == null ? null : Utility.DeserializeObject<List<OutputRequest>>(output);
-                    List<int>? fieldMatchesList = fieldMatches == null ? null : Utility.DeserializeObject<List<int>>(fieldMatches);
+                    Dictionary<string, string>? fieldMatchesList = fieldMatches == null ? 
+                        null : 
+                        Utility.DeserializeObject<Dictionary<string, string>>(fieldMatches);
 
                     Variant variantEnum = ParseVariant(variant);
-                    CapsisProcessHandler handler = new(AppSettings.GetInstance(), _logger, variantEnum);
+                    CapsisProcessHandler handler = new(AppSettings.GetInstance(), 
+                        GetLogger(), 
+                        variantEnum);
 
                     handler.Start();
 
                     if (initialYear == -1)
                         initialYear = DateTime.Now.Year;
 
-                    Guid newTaskGuid = handler.Simulate(data, outputRequestList, initialYear, isStochastic, nbRealizations, applicationScale, climateChange, initialYear + years, fieldMatchesList == null ? null : fieldMatchesList.ToArray());
+                    Guid newTaskGuid = handler.Simulate(data, 
+                        outputRequestList, 
+                        initialYear, 
+                        isStochastic, 
+                        nbRealizations, 
+                        applicationScale, 
+                        climateChange, 
+                        initialYear + years, 
+                        fieldMatchesList);
 
                     handlerDict[newTaskGuid.ToString()] = handler;
                     resultDict[newTaskGuid.ToString()] = handler.GetSimulationStatus();
@@ -314,7 +280,7 @@ namespace CapsisWebAPI.Controllers
                     CapsisProcessHandler.SimulationStatus status = resultDict[taskID];
                     if (!status.Status.Equals(CapsisProcessHandler.SimulationStatus.IN_PROGRESS))
                     {
-                        _logger?.LogInformation($"Task {taskID} is no longer in progress and therefore it will be removed from the result dictionary.");
+                        GetLogger().LogInformation($"Task {taskID} is no longer in progress and therefore it will be removed from the result dictionary.");
                         // remove the task from the table once the results are being successfully returned                                                            
                         resultDict.Remove(taskID);
                     }
@@ -350,7 +316,7 @@ namespace CapsisWebAPI.Controllers
                     // at this point, either the taskID is present in the handlerDict (not finished), the resultDict(finished) or not present (invalid)
                     if (handlerDict.ContainsKey(taskID))
                     {
-                        _logger?.LogInformation($"Cancelling unfinished task {taskID} and removing it from both handler and result dictionaries.");
+                        GetLogger().LogInformation($"Cancelling unfinished task {taskID} and removing it from both handler and result dictionaries.");
                         handlerDict[taskID].Stop();
                         handlerDict.Remove(taskID);
                         resultDict.Remove(taskID);
@@ -360,7 +326,7 @@ namespace CapsisWebAPI.Controllers
                     {
                         if (resultDict.ContainsKey(taskID))
                         {
-                            _logger?.LogInformation($"Removing finished task {taskID} from both result dictionary.");
+                            GetLogger().LogInformation($"Removing finished task {taskID} from both result dictionary.");
                             resultDict.Remove(taskID);
                             found = true;
                         }
@@ -375,7 +341,7 @@ namespace CapsisWebAPI.Controllers
                     }
                     else
                     {
-                        _logger?.LogWarning($"Task {taskID} has not been found in either the handler or the result dictionary. Therefore, it cannot be cancelled!");
+                        GetLogger().LogWarning($"Task {taskID} has not been found in either the handler or the result dictionary. Therefore, it cannot be cancelled!");
                         string message = "Unrecognized taskID";
 
                         if (HttpContext != null)
@@ -405,6 +371,21 @@ namespace CapsisWebAPI.Controllers
                 LogRequest(HttpContext.Request);
 
             return Ok(result);
+        }
+
+        protected override string GetClientPackageName()
+        {
+            return "CapsisWebAPI4R";
+        }
+
+        protected override string GetClientPackageURL()
+        {
+            return "https://github.com/CWFC-CCFB/CapsisWebAPI4R";
+        }
+
+        protected override string GetWebAPIVersion()
+        {
+            return AppSettings.GetInstance().Version;
         }
     }
 }

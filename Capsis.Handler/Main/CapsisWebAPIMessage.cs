@@ -60,7 +60,15 @@ namespace Capsis.Handler
         public string payload { set; get; }
 
 
-        internal static CapsisWebAPIMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[] fieldMatches, string fileName)
+        internal static CapsisWebAPIMessage CreateMessageSimulate(List<OutputRequest>? outputRequestList, 
+                                                                    int initialDateYr, 
+                                                                    bool isStochastic, 
+                                                                    int nbRealizations, 
+                                                                    string applicationScale, 
+                                                                    string climateChange, 
+                                                                    int finalDateYr, 
+                                                                    Dictionary<string, string> fieldMatches, 
+                                                                    string fileName)
         {
             var simParams = new Dictionary<string, dynamic>();
             simParams.Add("initialDateYr", initialDateYr);

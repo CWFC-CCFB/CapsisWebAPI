@@ -1,0 +1,5 @@
+The CapsisWebAPI4R package, Capsis Web API and its models are all licensed under the GNU Lesser General Public License v3.
+They come in the hope that they will be useful, but WITHOUT ANY WARRANTY.
+Please visit the following pages for further details about the licenses:
+CapsisWebAPI: https://github.com/CWFC-CCFB/CapsisWebAPI/blob/main/README.md
+CapsisWebAPI4R: https://github.com/CWFC-CCFB/CapsisWebAPI4R/blob/main/README.md

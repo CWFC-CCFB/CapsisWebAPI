@@ -1,8 +1,8 @@
 /*
  * This file is part of the CapsisWebAPI solution
  *
- * Author Jean-Francois Lavoie - Canadian Forest Service
- * Copyright (C) 2023 His Majesty the King in Right of Canada
+ * Copyright (C) 2023-25 His Majesty the King in Right of Canada
+ * Authors: Jean-Francois Lavoie and Mathieu Fortin, Canadian Forest Service
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,45 +21,86 @@
  */
 using CapsisWebAPI;
 using CapsisWebAPI.Controllers;
+using NLog;
 using NLog.Web;
+using WebAPIUtilities.ClientInteraction;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddControllers().AddNewtonsoftJson();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// NLog: Setup NLog for Dependency injection
-builder.Logging.ClearProviders();
-builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-builder.Host.UseNLog();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+namespace CapsisWebAPI
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    public class Program
+    {
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureLogging((hostContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+                }).UseNLog().ConfigureServices(services =>
+                {
+                }).ConfigureAppConfiguration((HostContext, config) =>
+                {
+                    config.AddEnvironmentVariables(prefix: "CAPSIS_");
+                }).ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+        
+        public static void Main(string[] args)
+        {
+            var nLogger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+
+
+            try
+            {
+                var app = CreateHostBuilder(args).Build();
+                Microsoft.Extensions.Logging.ILogger logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CapsisSimulationController>>();
+                logger.LogInformation($"CapsisWebAPI {AppSettings.GetInstance().Version} initializing...");
+                logger.LogInformation("CAPSIS path set to " + AppSettings.GetInstance().CapsisDirectory);
+                logger.LogInformation("DATA path set to " + AppSettings.GetInstance().DataDirectory);
+                new ReadLatestClientVersionTask(logger, 60);
+                new ReadLatestMessageToClientTask(logger, 60);
+                new ReadShortLicenseTask(logger, 60);
+                CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
+                app.Run();
+            }
+            catch (Exception e)
+            {
+                nLogger.Error(e, "Application stopped because of exception");
+            }
+            finally
+            {
+                NLog.LogManager.Shutdown();
+            }
+        }
+    }
+
+
+
+//    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+//    builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerGen();
+
+
+//var app = builder.Build();
+
+//// Configure the HTTP request pipeline.
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
+//}
+
+//app.UseHttpsRedirection();
+
+
+
+
+//string DataDirectorySweeperMins = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectorySweeperMins"];
+//DirectorySweeper sweeper = new DirectorySweeper(AppSettings.GetInstance().DataDirectory, int.Parse(DataDirectorySweeperMins));
+
+//CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), app.Logger));
+
+
+//app.Run();
+
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-
-app.Logger.LogInformation("CAPSISWebAPI version " + AppSettings.GetInstance().Version);
-app.Logger.LogInformation("CAPSIS path set to " + AppSettings.GetInstance().CapsisDirectory);
-app.Logger.LogInformation("DATA path set to " + AppSettings.GetInstance().DataDirectory);
-
-string DataDirectorySweeperMins = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build()["DataDirectorySweeperMins"];
-DirectorySweeper sweeper = new DirectorySweeper(AppSettings.GetInstance().DataDirectory, int.Parse(DataDirectorySweeperMins));
-
-CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), app.Logger));
-
-app.Run();

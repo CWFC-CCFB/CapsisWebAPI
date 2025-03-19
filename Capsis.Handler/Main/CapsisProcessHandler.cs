@@ -1,8 +1,8 @@
 ﻿/*
  * This file is part of the CapsisWebAPI solution
  *
- * Author Jean-Francois Lavoie - Canadian Forest Service
- * Copyright (C) 2023 His Majesty the King in Right of Canada
+ * Authors: Jean-Francois Lavoie and Mathieu Fortin, Canadian Forest Service
+ * Copyright (C) 2023-25 His Majesty the King in Right of Canada
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,7 +30,23 @@ using static Capsis.Handler.CapsisWebAPIMessage;
 
 [assembly: InternalsVisibleTo("Capsis.Handler.Tests")]
 namespace Capsis.Handler
-{ 
+{
+    /// <summary>
+    /// A handler that starts a CapsisWebAPIScriptRunner through a command line and 
+    /// connects to it using a socket connection. A typical use of this class goes
+    /// as follows:
+    /// 
+    /// <code>
+    /// CapsisProcessHandler handler = new(mySettings, myLogger, CapsisProcessHandler.Variant.ARTEMIS);
+    /// handler.Start();  // start the handler in a different thread
+    /// ...
+    /// handler.Simulate(data, null, 2000, true, 100, "Stand", "NoChange", 2100, fieldMatches);
+    /// SimulationStatus simStatus = handler.GetSimulationStatusAfterCompletion();
+    /// </code>
+    /// 
+    /// The call to GetSimulationStatusAfterCompletion method is blocking. Alternatively, the GetSimulationStatus
+    /// can be called repeatedly. The SimulationStatus contains all the information regarding the simulation results.
+    /// </summary>
     public class CapsisProcessHandler
     {
 
@@ -66,9 +82,6 @@ namespace Capsis.Handler
             ERROR            
         }
 
-        //        private readonly String capsisPath;
-        //        private readonly String dataDirectory;
-        //        private readonly int _timeoutMilliSec;
         private readonly CapsisProcessHandlerSettings _settings;
         private bool disableJavaWatchdog;
 
@@ -225,6 +238,8 @@ namespace Capsis.Handler
 
         void LaunchProcess()
         {
+            bool isDebugMode = false;
+
             stopListening = false;
             Progress = 0.0;
 
@@ -270,7 +285,7 @@ namespace Capsis.Handler
 
                 readerProcessOutput = Process.StandardOutput;
             }                                    
-            else            
+            else      // DEBUG mode      
             {
                 try
                 {
@@ -278,7 +293,8 @@ namespace Capsis.Handler
 
                     // do not change the state, let's switch to the new stream and wait for a status message to do so
                     readerProcessOutput = new StreamReader(client.GetStream());
-                    writerProcessInput = new StreamWriter(client.GetStream());                    
+                    writerProcessInput = new StreamWriter(client.GetStream());
+                    isDebugMode = true;
                 }
                 catch (Exception)
                 {
@@ -288,7 +304,7 @@ namespace Capsis.Handler
                 }
             }            
 
-            while (readerProcessOutput != null && !stopListening && !Process.HasExited)
+            while (readerProcessOutput != null && !stopListening && (isDebugMode || !Process.HasExited))
             {                
                 Task<string?> readLineTask = readerProcessOutput.ReadLineAsync();
 
@@ -346,11 +362,12 @@ namespace Capsis.Handler
                                     {                                        
                                         if (msg.payload != null)
                                         {
-                                            Progress = Double.Parse(msg.payload);   
+                                            Progress = Double.Parse(msg.payload);
+                                            Thread.Sleep(2000);
+                                            CapsisWebAPIMessage reply = CapsisWebAPIMessage.CreateMessageStatus();
+                                            SendMessage(reply);
                                         }
 
-                                        CapsisWebAPIMessage reply = CapsisWebAPIMessage.CreateMessageStatus();
-                                        SendMessage(reply);
                                     }
                                 }
                                 else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_SIMULATION_STARTED)))
@@ -359,6 +376,9 @@ namespace Capsis.Handler
                                     {
                                         Status = State.READY;
                                     }
+                                    Thread.Sleep(2000);
+                                    CapsisWebAPIMessage reply = CapsisWebAPIMessage.CreateMessageStatus();
+                                    SendMessage(reply);
                                 }
                                 else if (msg.message.Equals(Enum.GetName<CapsisWebAPIMessageType>(CapsisWebAPIMessageType.MESSAGE_STOP)))
                                 {
@@ -444,11 +464,21 @@ namespace Capsis.Handler
                 SendMessage(msg);
             }
 
-            while (Status == State.OPERATION_PENDING || (Process != null && !Process.HasExited))
-                Thread.Sleep(1);
+            while (Process != null && !Process.HasExited)
+            {
+                Thread.Sleep(100);
+            }
         }
 
-        public Guid Simulate(string data, List<OutputRequest>? outputRequestList, int initialDateYr, bool isStochastic, int nbRealizations, string applicationScale, string climateChange, int finalDateYr, int[]? fieldMatches)
+        public Guid Simulate(string data, 
+            List<OutputRequest>? outputRequestList, 
+            int initialDateYr, 
+            bool isStochastic, 
+            int nbRealizations, 
+            string applicationScale, 
+            string climateChange, 
+            int finalDateYr, 
+            Dictionary<string, string> fieldMatches)
         {
             if (ownsProcess && Process == null)
                 throw new Exception("Cannot send stop message on null process");
@@ -597,15 +627,24 @@ namespace Capsis.Handler
             }
         }
 
-        public bool isReady()
+//        public bool isResultAvailable() { return Result != null; }
+
+        /// <summary>
+        /// Provide the simulation status when the task is complete.
+        /// The task can complete with error or without error.
+        /// </summary>
+        /// <returns>A SimulationStatus instance</returns>
+        public SimulationStatus GetSimulationStatusAfterCompletion()
         {
-            lock(this)
+            SimulationStatus simStatus = GetSimulationStatus();
+            while (simStatus.Status == SimulationStatus.IN_PROGRESS)
             {
-                return Status == State.READY;
+                Thread.Sleep(500);
+                simStatus = GetSimulationStatus();
             }
+            return simStatus;
         }
 
-        public bool isResultAvailable() { return Result != null; }
 
         public SimulationStatus GetSimulationStatus()
         {
