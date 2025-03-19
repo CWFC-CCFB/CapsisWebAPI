@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <Reference Include="WebAPIUtilities">
-      <HintPath>..\..\WebAPIUtilities\bin\Debug\net8.0\WebAPIUtilities.dll</HintPath>
+      <HintPath>.\ext\WebAPIUtilities.dll</HintPath>
     </Reference>
   </ItemGroup>
 
