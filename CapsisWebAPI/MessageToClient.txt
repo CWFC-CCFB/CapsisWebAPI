@@ -1,0 +1,2 @@
+Welcome to Capsis Web API ! 
+For more information, please visit https://github.com/CWFC-CCFB/CapsisWebAPI4R/wiki.

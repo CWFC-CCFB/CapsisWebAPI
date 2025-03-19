@@ -1,4 +1,5 @@
 echo WARNING : This batch file should be run with administrator rights
+echo Make sure the CAPSISWEBAPI_CAPSIS_PATH environmental variable points to the CAPSIS root folder
 echo Usage : app_update destination_site
 
 cd ..

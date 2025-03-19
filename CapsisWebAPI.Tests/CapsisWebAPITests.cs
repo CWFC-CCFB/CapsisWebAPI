@@ -37,7 +37,7 @@ namespace CapsisWebAPI
 
 
         [TestMethod]
-        public void CacheTest()
+        public void Test01CacheTest()
         {
             StaticQueryCache cache = StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger);
             Assert.AreEqual(2, cache.VariantDataMap.Count);
@@ -46,14 +46,34 @@ namespace CapsisWebAPI
             Assert.AreEqual(1, cache.VariantDataMap[Variant.ARTEMIS2014].Scope.Count);
         }
 
+        static Dictionary<string, string> GetFieldMatches()
+        {
+            Dictionary<string, string> fieldMatches = new Dictionary<string, string>();
+            fieldMatches["PLOT"] = "ID_PE";
+            fieldMatches["LATITUDE"] = "LATITUDE";
+            fieldMatches["LONGITUDE"] = "LONGITUDE";
+            fieldMatches["ALTITUDE"] = "ALTITUDE";
+            fieldMatches["ECOREGION"] = "GUIDE_ECO";
+            fieldMatches["TYPEECO"] = "TYPE_ECO";
+            fieldMatches["DRAINAGE_CLASS"] = "CL_DRAI";
+            fieldMatches["SPECIES"] = "ESSENCE";
+            fieldMatches["TREESTATUS"] = "ETAT";
+            fieldMatches["TREEDHPCM"] = "dbhCm";
+            fieldMatches["TREEFREQ"] = "freq";
+            fieldMatches["TREEHEIGHT"] = "heightM";
+            fieldMatches["SLOPE_CLASS"] = "CL_PENT";
+
+            return fieldMatches;
+        }
+
 
         [TestMethod]
-        public void Simulate_HappyPathTest()
+        public void Test02SimulateArtemis2009_HappyPathTest()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
             string data = File.ReadAllText("data/STR_RE2_70.csv");
-            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis");
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(1, outputTypes.Count);
@@ -62,12 +82,12 @@ namespace CapsisWebAPI
 
 
         [TestMethod]
-        public void Simulate_HappyPathTest2()
+        public void Test03SimulateArtemis2009_HappyPathTest()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }]";
             string data = File.ReadAllText("data/STR_RE2_70.csv");
-            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis");
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(2, outputTypes.Count);
@@ -76,12 +96,12 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
-        public void Simulate_HappyPathTest3()
+        public void Test04SimulateArtemis2009_HappyPathTest()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":\"AliveBasalArea\",\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
             string data = File.ReadAllText("data/STR_RE2_70.csv");
-            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
-            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis");
             SimulationStatus simStatus = GetStatus(taskID);
             List<string> outputTypes = simStatus.Result.outputTypes;
             Assert.AreEqual(3, outputTypes.Count);
@@ -91,7 +111,7 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
-        public void VariantListTest()
+        public void Test05VariantList()
         {
             CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
             CapsisSimulationController controller = new(logger);
@@ -106,7 +126,7 @@ namespace CapsisWebAPI
 
 
         [TestMethod]
-        public void PossibleRequests()
+        public void Test06PossibleRequests()
         {
             CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
             CapsisSimulationController controller = new(logger);
@@ -116,37 +136,52 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
-        public void CapsisStatusTest()
+        public void Test07CapsisStatus()
         {
             CapsisSimulationController.setStaticQueryCache(StaticQueryCache.FillStaticCache(AppSettings.GetInstance(), logger));
             CapsisSimulationController controller = new(logger);
-            IActionResult result = controller.CapsisStatus();
+            IActionResult result = controller.GetStatus("1.0.0");
             Assert.IsTrue(result is OkObjectResult);
-            Assert.AreEqual(3, ((Dictionary<String, Object>)((OkObjectResult)result).Value).Count);
+            Assert.IsTrue(((Dictionary<string, string>)((OkObjectResult)result).Value).ContainsKey("Web API version"));
+            Assert.IsTrue(((Dictionary<string, string>)((OkObjectResult)result).Value).ContainsKey("Capsis version"));
         }
 
 
 
         [TestMethod]
-        public void Simulate_WithError()
+        public void Test08Simulate_WithError()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":\"DeadVolume\",\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
             string data = File.ReadAllText("data/STR_3O_BjR_MS_Pe_NA_v12_10.csv");
-            int[] fieldMatches = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1, -1 };
-            string taskID = StartSimulation(validOutputRequest, data, fieldMatches);
+            Dictionary<string, string> fieldMatches = new Dictionary<string, string>();
+            fieldMatches["PLOT"] = "id_pe";
+            fieldMatches["LATITUDE"] = "LATITUDE";
+            fieldMatches["LONGITUDE"] = "LONGITUDE";
+            fieldMatches["ALTITUDE"] = "ALTITUDE";
+            fieldMatches["ECOREGION"] = "REG_ECO";
+            fieldMatches["TYPEECO"] = "TYPE_ECO";
+            fieldMatches["DRAINAGE_CLASS"] = "CL_DRAI";
+            fieldMatches["SPECIES"] = "ESSENCE";
+            fieldMatches["TREESTATUS"] = "ETAT";
+            fieldMatches["TREEDHPCM"] = "dhp";
+            fieldMatches["TREEFREQ"] = "NB_TIGE";
+            fieldMatches["TREEHEIGHT"] = "heightM";
+            fieldMatches["SLOPE_CLASS"] = "CL_PENT";
+
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis");
             SimulationStatus simStatus = GetStatus(taskID);
 
             Assert.IsTrue(simStatus.Status.Equals("ERROR"));
         }
 
 
-        static string StartSimulation(string outputRequests, string data, int[] fieldMatches)
+        static string StartSimulation(string outputRequests, string data, Dictionary<string, string> fieldMatches, string variantStr)
         {
             CapsisSimulationController controller = new(logger);
 
             string fieldMatchesJSON = JsonConvert.SerializeObject(fieldMatches);
 
-            IActionResult result = controller.Simulate(data, 100, outputRequests, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
+            IActionResult result = controller.Simulate(data, 100, outputRequests, variantStr, 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
             Assert.AreEqual("OkObjectResult", result.GetType().Name, "Did not receive an OkObjectResult result as expected but " + result.GetType().Name);   // OkObjectResult is expected because this call should succeed
             OkObjectResult oresult = (OkObjectResult)result;
             Assert.AreEqual(oresult.StatusCode, 200, "Expected a 200 status code");
@@ -189,14 +224,14 @@ namespace CapsisWebAPI
         }
 
         [TestMethod]
-        public void Simulate_CancelTest()
+        public void Test09Simulate_Cancel()
         {
             string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
 
             CapsisSimulationController controller = new(logger);
 
             string data = File.ReadAllText("data/STR_RE2_70.csv");
-            int[] fieldMatches = { 1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, -1, 7, -1, -1, -1, -1, 13, -1 };
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
             string fieldMatchesJSON = JsonConvert.SerializeObject(fieldMatches);
 
             IActionResult result = controller.Simulate(data, 100, validOutputRequest, "Artemis", 2000, true, 100, "Stand", "NoChange", fieldMatchesJSON);
@@ -221,5 +256,49 @@ namespace CapsisWebAPI
             BadRequestObjectResult BROresult = (BadRequestObjectResult)result;
             Assert.AreEqual(BROresult.StatusCode, 400, "Expected a 400 status code");
         }
+
+        [TestMethod]
+        public void Test10SimulateArtemis2014_HappyPathTest()
+        {
+            string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"]} }]";
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis2014");
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(1, outputTypes.Count);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[0]);
+        }
+
+
+        [TestMethod]
+        public void Test11SimulateArtemis2014_HappyPathTest()
+        {
+            string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }]";
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis2014");
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(2, outputTypes.Count);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[0]);
+            Assert.AreEqual("AliveVolume_SAB", outputTypes[1]);
+        }
+
+        [TestMethod]
+        public void Test12SimulateArtemis2014_HappyPathTest()
+        {
+            string validOutputRequest = "[{ \"requestType\":\"AliveVolume\",\"aggregationPatterns\":{ \"Coniferous\":[\"EPN\",\"PIG\"], \"SAB\":[\"SAB\"]} }, { \"requestType\":\"AliveBasalArea\",\"aggregationPatterns\":{ \"SEP\":[\"EPN\",\"SAB\",\"PIG\"]} }]";
+            string data = File.ReadAllText("data/STR_RE2_70.csv");
+            Dictionary<string, string> fieldMatches = GetFieldMatches();
+            string taskID = StartSimulation(validOutputRequest, data, fieldMatches, "Artemis2014");
+            SimulationStatus simStatus = GetStatus(taskID);
+            List<string> outputTypes = simStatus.Result.outputTypes;
+            Assert.AreEqual(3, outputTypes.Count);
+            Assert.AreEqual("AliveBasalArea_SEP", outputTypes[0]);
+            Assert.AreEqual("AliveVolume_Coniferous", outputTypes[1]);
+            Assert.AreEqual("AliveVolume_SAB", outputTypes[2]);
+        }
+
     }
 }
