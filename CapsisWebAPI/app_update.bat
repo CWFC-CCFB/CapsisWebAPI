@@ -23,7 +23,7 @@ REM build app
 dotnet publish -c Release -r win-x64 
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-robocopy bin\Release\net6.0\win-x64\publish c:\inetpub\%1 /E 
+robocopy bin\Release\net8.0\win-x64\publish c:\inetpub\%1 /E 
 if %errorlevel% geq 9 exit /b %errorlevel%
 
 sc start %1
